@@ -1,0 +1,16 @@
+# Core
+qdrant-client
+
+transformers
+sentence-transformers
+cohere
+pymupdf
+redis
+pydantic
+fastapi
+uvicorn
+python-dotenv
+requests
+
+# Utils
+tqdm

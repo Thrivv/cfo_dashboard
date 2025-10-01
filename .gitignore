@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env
+venv/
+.env*/ 
+*.db
+
+# Logs
+*.log
+
+# System / IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
