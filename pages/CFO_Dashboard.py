@@ -161,7 +161,17 @@ def render():
                         cache_keys = [key for key in st.session_state.keys() if key.startswith(('filtered_data_', 'profit_trend_', 'inventory_trend_', 'capex_trend_'))]
                         for key in cache_keys:
                             del st.session_state[key]
+                        # Reset filters to defaults
                         st.session_state.cfo_filters = validate_filters({})
+                        # Clear any UI-specific session state
+                        if 'unit_filter' in st.session_state:
+                            del st.session_state['unit_filter']
+                        if 'start_date_filter' in st.session_state:
+                            del st.session_state['start_date_filter']
+                        if 'end_date_filter' in st.session_state:
+                            del st.session_state['end_date_filter']
+                        if 'period_filter' in st.session_state:
+                            del st.session_state['period_filter']
                         st.rerun()
                         
                 with f5:
@@ -258,14 +268,16 @@ def render():
                         net_pos = payables_receivables["net_position"]
                         ap_trend = payables_receivables["payables_trend"]
                         ar_trend = payables_receivables["receivables_trend"]
+                        ap_strength = payables_receivables.get("ap_trend_strength", 50)
+                        ar_strength = payables_receivables.get("ar_trend_strength", 50)
                         
                         st.markdown(f"""
                         <div class="kpi">
                             <div class="label">Monthly Payables vs Receivables</div>
                             <div class="value">${net_pos:,.0f}</div>
                             <div style="font-size: 0.8rem; color: #9aa3ab; margin-top: 4px;">
-                                AP: ${ap:,.0f} ({ap_trend:+.1f}%)<br/>
-                                AR: ${ar:,.0f} ({ar_trend:+.1f}%)
+                                AP: ${ap:,.0f} ({ap_trend:+.1f}%) [{ap_strength:.0f}/100]<br/>
+                                AR: ${ar:,.0f} ({ar_trend:+.1f}%) [{ar_strength:.0f}/100]
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -277,6 +289,8 @@ def render():
                         current_rev = revenue_forecast["current_revenue"]
                         next_rev = revenue_forecast["next_month_forecast"]
                         growth = revenue_forecast["growth_rate"]
+                        trend_strength = revenue_forecast.get("trend_strength", 50)
+                        r_squared = revenue_forecast.get("r_squared", 0)
                         
                         st.markdown(f"""
                         <div class="kpi">
@@ -284,7 +298,8 @@ def render():
                             <div class="value">${next_rev:,.0f}</div>
                             <div style="font-size: 0.8rem; color: #9aa3ab; margin-top: 4px;">
                                 Current: ${current_rev:,.0f}<br/>
-                                Growth: {growth:+.1f}%
+                                Growth: {growth:+.1f}% [{trend_strength:.0f}/100]<br/>
+                                R²: {r_squared:.2f}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -296,6 +311,9 @@ def render():
                         current_cash = cash_flow_forecast["current_cash"]
                         next_cash = cash_flow_forecast["next_month_forecast"]
                         runway = cash_flow_forecast["runway_months"]
+                        best_runway = cash_flow_forecast.get("best_case_runway", runway)
+                        worst_runway = cash_flow_forecast.get("worst_case_runway", runway)
+                        burn_trend = cash_flow_forecast.get("burn_trend", 0)
                         
                         st.markdown(f"""
                         <div class="kpi">
@@ -303,7 +321,8 @@ def render():
                             <div class="value">${next_cash:,.0f}</div>
                             <div style="font-size: 0.8rem; color: #9aa3ab; margin-top: 4px;">
                                 Current: ${current_cash:,.0f}<br/>
-                                Runway: {runway:.1f} months
+                                Runway: {runway:.1f}m (Best: {best_runway:.1f}m)<br/>
+                                Burn: {burn_trend:+.1f}%
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -354,23 +373,6 @@ def render():
                 fig = _apply_plot_theme(fig, height=360, title='Profitability Trend')
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Budget vs Spend Variance Metrics
-                st.markdown('<div class="panel"><div class="section-title">Budget vs Spend Analysis</div>', unsafe_allow_html=True)
-                opex_actual = latest_raw.get('Operating Expenses (OPEX)', 0)
-                cost_variance = latest_raw.get('Budget Variance (%)', 0)
-                
-                st.markdown(
-                    f"""
-                    <div class="kpi-grid cols-2">
-                      <div class="kpi"><div class="label">Variance</div><div class="value">{variance:+.1f}%</div></div>
-                      <div class="kpi"><div class="label">OpEx Variance</div><div class="value">{cost_variance:+.1f}%</div></div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
                 
                 # Cash Flow & Liquidity
                 st.markdown('<div class="panel"><div class="section-title">Cash Flow & Liquidity</div>', unsafe_allow_html=True)
@@ -435,13 +437,11 @@ def render():
                 
                 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
                 
-                # Balance Sheet & Risk Management (Detailed view only)
+                # Balance Sheet Overview (Detailed view only)
                 if show_detailed:
-                    st.markdown('<div class="panel"><div class="section-title">Balance Sheet & Risk Management</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="panel"><div class="section-title">Balance Sheet Overview</div>', unsafe_allow_html=True)
                     
-                    # Balance Sheet Metrics as KPI cards (removed FX Exposure, moved to insights)
-                    fx_exposure = latest_raw.get('Foreign_Exchange_Exposure', 0)
-                    interest_risk = latest_raw.get('Interest_Rate_Risk', 0)
+                    # Balance Sheet Metrics as KPI cards
                     st.markdown(
                         f"""
                         <div class="kpi-grid cols-6">
@@ -456,21 +456,6 @@ def render():
                         unsafe_allow_html=True,
                     )
                     
-                    # FX & Interest Risk Insights (moved from charts to insights)
-                    risk_insights = []
-                    if abs(fx_exposure) > 100000:
-                        risk_level = "HIGH" if abs(fx_exposure) > 1000000 else "MEDIUM"
-                        risk_insights.append(f"[{risk_level}] FX Exposure: ${fx_exposure:,.0f} - Monitor currency fluctuations")
-                    if abs(interest_risk) > 2:
-                        risk_level = "HIGH" if abs(interest_risk) > 5 else "MEDIUM" 
-                        risk_insights.append(f"[{risk_level}] Interest Rate Risk: {interest_risk:.1f}% - Consider hedging strategies")
-                    
-                    if risk_insights:
-                        st.markdown('<div class="section-title">Risk Insights</div>', unsafe_allow_html=True)
-                        for insight in risk_insights:
-                            st.markdown(f"- {insight}")
-                        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-                    
                     st.markdown('</div>', unsafe_allow_html=True)
                     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
                 
@@ -479,18 +464,13 @@ def render():
                 if show_detailed:
                     st.markdown('<div class="panel"><div class="section-title">Operational Efficiency & Resource Management</div>', unsafe_allow_html=True)
                     
-                    # Operational Metrics as KPI cards
+                    # Essential Operational Efficiency Metrics
                     st.markdown(
                         f"""
-                        <div class="kpi-grid">
-                          <div class="kpi"><div class="label">Inventory Value</div><div class="value">${latest_raw.get('Inventory Value', 0):,.0f}</div></div>
+                        <div class="kpi-grid cols-3">
                           <div class="kpi"><div class="label">Inventory Turnover</div><div class="value">{latest_raw.get('Inventory Turnover', 0):.1f}x</div></div>
-                          <div class="kpi"><div class="label">CapEx</div><div class="value">${latest_raw.get('Capital Expenditure (CapEx)', 0):,.0f}</div></div>
-                          <div class="kpi"><div class="label">OpEx</div><div class="value">${latest_raw.get('Operational Expenditure (OpEx)', 0):,.0f}</div></div>
-                          <div class="kpi"><div class="label">Headcount</div><div class="value">{latest_raw.get('Headcount', 0):,.0f}</div></div>
                           <div class="kpi"><div class="label">Cost/Employee</div><div class="value">${latest_raw.get('Cost per Employee', 0):,.0f}</div></div>
-                          <div class="kpi"><div class="label">Pipeline Value</div><div class="value">${latest_raw.get('Sales Pipeline Value', 0):,.0f}</div></div>
-                          <div class="kpi"><div class="label">Order Backlog</div><div class="value">${latest_raw.get('Order Backlog', 0):,.0f}</div></div>
+                          <div class="kpi"><div class="label">CapEx</div><div class="value">${latest_raw.get('Capital Expenditure (CapEx)', 0):,.0f}</div></div>
                         </div>
                         """,
                         unsafe_allow_html=True,

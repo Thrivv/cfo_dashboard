@@ -75,8 +75,9 @@ def render():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Category Spend Forecasting Chart
+            # Department Spend Analysis - Text and Metrics
             st.markdown('<div class="chart-container"><div class="section-title">Department Spend Analysis</div>', unsafe_allow_html=True)
+            st.markdown('**Purpose:** Track department spending patterns and forecast future expenses using 12-month historical data.<br/>**Insight:** Compare spending trends across departments and predict budget requirements for better resource allocation.', unsafe_allow_html=True)
             
             if selected_dept != 'All Departments':
                 dept_data = raw_df[raw_df['Business Unit / Department'] == selected_dept]
@@ -101,32 +102,50 @@ def render():
                         st.metric("Total Spend", f"${total_spend:,.0f}", f"{spend_trend:+.1f}%")
                     with metric_col2:
                         st.metric("OPEX", f"${opex:,.0f}")
-                    
-                    # Simple spend forecast chart
-                    if len(dept_data) >= 3:
-                        spend_history = dept_data['Operating Expenses (OPEX)'].tail(6).values
-                        dates = pd.date_range(end=datetime.now(), periods=len(spend_history), freq='ME')
-                        
-                        # Simple linear forecast
-                        import numpy as np
-                        x = np.arange(len(spend_history))
-                        coeffs = np.polyfit(x, spend_history, 1)
-                        forecast_periods = np.arange(len(spend_history), len(spend_history) + 3)
-                        forecast_values = np.polyval(coeffs, forecast_periods)
-                        
-                        # Create chart
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=dates, y=spend_history, mode='lines+markers', name='Historical', line=dict(color='#3498db')))
-                        
-                        forecast_dates = pd.date_range(start=dates[-1] + timedelta(days=30), periods=3, freq='ME')
-                        fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_values, mode='lines+markers', name='Forecast', line=dict(color='#e74c3c', dash='dash')))
-                        
-                        fig = _apply_plot_theme(fig, height=300, title=f'{selected_dept} Spend Forecast')
-                        st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning(f"No data available for {selected_dept} department.")
             else:
                 # All departments analysis
+                dept_spend = raw_df.groupby('Business Unit / Department').agg({
+                    'Operating Expenses (OPEX)': 'sum',
+                    'Cost of Goods Sold (COGS)': 'sum'
+                }).reset_index()
+                
+                dept_spend['Total Spend'] = dept_spend['Operating Expenses (OPEX)'] + dept_spend['Cost of Goods Sold (COGS)']
+                
+                # Display summary metrics
+                total_all_spend = dept_spend['Total Spend'].sum()
+                st.metric("Total Company Spend", f"${total_all_spend:,.0f}")
+                st.metric("Departments", f"{len(dept_spend)}")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        with col2:
+            # Department Spend Analysis - Chart
+            if selected_dept != 'All Departments':
+                dept_data = raw_df[raw_df['Business Unit / Department'] == selected_dept]
+                if not dept_data.empty and len(dept_data) >= 3:
+                    spend_history = dept_data['Operating Expenses (OPEX)'].tail(12).values
+                    dates = pd.date_range(end=datetime.now(), periods=len(spend_history), freq='ME')
+                    
+                    # Simple linear forecast
+                    import numpy as np
+                    x = np.arange(len(spend_history))
+                    coeffs = np.polyfit(x, spend_history, 1)
+                    forecast_periods = np.arange(len(spend_history), len(spend_history) + 3)
+                    forecast_values = np.polyval(coeffs, forecast_periods)
+                    
+                    # Create chart
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=dates, y=spend_history, mode='lines+markers', name='Historical', line=dict(color='#3498db')))
+                    
+                    forecast_dates = pd.date_range(start=dates[-1] + timedelta(days=30), periods=3, freq='ME')
+                    fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_values, mode='lines+markers', name='Forecast', line=dict(color='#e74c3c', dash='dash')))
+                    
+                    fig = _apply_plot_theme(fig, height=300, title=f'{selected_dept} Spend Forecast (12M Historical)')
+                    st.plotly_chart(fig, use_container_width=True)
+            else:
+                # All departments analysis chart
                 dept_spend = raw_df.groupby('Business Unit / Department').agg({
                     'Operating Expenses (OPEX)': 'sum',
                     'Cost of Goods Sold (COGS)': 'sum'
@@ -140,44 +159,6 @@ def render():
                             color_continuous_scale='Viridis')
                 fig = _apply_plot_theme(fig, height=300, title='Department Spend Comparison')
                 st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        with col2:
-            # Revenue vs Forecast Analysis Chart
-            # st.markdown('<div class="chart-container"><div class="section-title">Revenue vs Forecast</div>', unsafe_allow_html=True)
-            
-            # Get revenue data
-            revenue_data = raw_df[['Date / Period', 'Revenue (Actual)', 'Revenue (Budget / Forecast)']].copy()
-            revenue_data['Date'] = pd.to_datetime(revenue_data['Date / Period'], errors='coerce')
-            revenue_data = revenue_data.sort_values('Date').tail(12)  # Last 12 months
-            
-            if not revenue_data.empty:
-                # Revenue comparison chart
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=revenue_data['Date'], y=revenue_data['Revenue (Actual)'], 
-                                       mode='lines+markers', name='Actual Revenue', line=dict(color='#2ecc71')))
-                fig.add_trace(go.Scatter(x=revenue_data['Date'], y=revenue_data['Revenue (Budget / Forecast)'], 
-                                       mode='lines+markers', name='Forecast', line=dict(color='#3498db')))
-                
-                fig = _apply_plot_theme(fig, height=300, title='Revenue: Actual vs Forecast')
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Revenue variance metrics
-                latest_revenue = revenue_data.iloc[-1]
-                actual = latest_revenue['Revenue (Actual)']
-                budget = latest_revenue['Revenue (Budget / Forecast)']
-                variance = ((actual - budget) / budget * 100) if budget > 0 else 0
-                
-                metric_col1, metric_col2 = st.columns(2)
-                with metric_col1:
-                    st.metric("Actual Revenue", f"${actual:,.0f}")
-                with metric_col2:
-                    st.metric("Variance", f"{variance:+.1f}%", delta=f"{variance:+.1f}%")
-            else:
-                st.warning("No revenue data available.")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
         
         # AI Forecasting Section - Full Width
         st.markdown('<div class="panel"><div class="section-title">Revenue Forecasting with LagLlama</div>', unsafe_allow_html=True)

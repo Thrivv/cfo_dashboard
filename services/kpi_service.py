@@ -35,68 +35,153 @@ def load_raw_dataframe() -> pd.DataFrame | None:
 
 
 def get_financial_overview() -> dict:
-    """Compute overview metrics using simplified DataFrame from load_cfo_data()."""
-    data = load_cfo_data()
-    if data is None or data.empty:
-        return get_default_financial_overview()
+    """Compute overview metrics using actual data from CSV."""
+    raw_data = load_raw_dataframe()
+    if raw_data is None or raw_data.empty:
+        return get_fallback_financial_overview()
 
-    df = data.copy()
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df = raw_data.copy()
+    df['Date'] = pd.to_datetime(df['Date / Period'], errors='coerce')
 
     latest = df.iloc[-1]
     previous = df.iloc[-2] if len(df) > 1 else latest
-    cash_change = ((latest['Cash_on_Hand'] - previous['Cash_on_Hand']) / max(previous['Cash_on_Hand'], 1e-9)) * 100
-    burn_change = ((latest['Burn_Rate'] - previous['Burn_Rate']) / max(previous['Burn_Rate'], 1e-9)) * 100
+    
+    # Calculate actual changes from data
+    cash_balance = latest.get('Cash Balance', 0)
+    prev_cash_balance = previous.get('Cash Balance', 0)
+    cash_change = ((cash_balance - prev_cash_balance) / max(prev_cash_balance, 1e-9)) * 100
+    
+    cash_outflows = latest.get('Cash Outflows', 0)
+    prev_cash_outflows = previous.get('Cash Outflows', 0)
+    burn_change = ((cash_outflows - prev_cash_outflows) / max(prev_cash_outflows, 1e-9)) * 100
+    
+    # Calculate AR aging from actual data
+    ar_balance = latest.get('Accounts Receivable (AR)', 0)
+    prev_ar_balance = previous.get('Accounts Receivable (AR)', 0)
+    ar_change = ((ar_balance - prev_ar_balance) / max(prev_ar_balance, 1e-9)) * 100
+    
+    # Calculate MRR/ARR from actual revenue data
+    current_revenue = latest.get('Revenue (Actual)', 0)
+    mrr = current_revenue  # Monthly recurring revenue
+    arr = current_revenue * 12  # Annual run rate
+    
+    # Calculate YoY growth from actual data
+    if len(df) >= 12:  # Need at least 12 months for YoY calculation
+        year_ago_revenue = df.iloc[-12].get('Revenue (Actual)', 0)
+        yoy_growth = ((current_revenue - year_ago_revenue) / max(year_ago_revenue, 1e-9)) * 100
+    else:
+        yoy_growth = 0
+    
+    # Calculate runway (cash outflows are already monthly)
+    runway_months = cash_balance / cash_outflows if cash_outflows > 0 else 0
+    
+    # Calculate churn rate (simplified - would need more detailed data)
+    churn_rate = 2.3  # Placeholder - would need customer data for actual calculation
 
     return {
-        "Cash on Hand": int(latest['Cash_on_Hand']),
+        "Cash on Hand": int(cash_balance),
         "Cash on Hand Change": f"{'+' if cash_change >= 0 else ''}{cash_change:.1f}%",
-        "Operating Account": int(latest['Cash_on_Hand'] * 0.5),
-        "Reserve Account": int(latest['Cash_on_Hand'] * 0.33),
-        "Investment": int(latest['Cash_on_Hand'] * 0.17),
-        "Monthly Burn": int(latest['Burn_Rate'] * 30),
+        "Operating Account": int(cash_balance * 0.5),
+        "Reserve Account": int(cash_balance * 0.33),
+        "Investment": int(cash_balance * 0.17),
+        "Monthly Burn": int(cash_outflows),
         "Monthly Burn Change": f"{'+' if burn_change >= 0 else ''}{burn_change:.1f}%",
-        "Runway": round(latest['Runway_Months'], 1),
+        "Runway": round(runway_months, 1),
         "Runway Change": "+3 months",
         "Runway Note": "Projected runway based on current burn rate",
-        "Outstanding Invoices": int(latest['Outstanding_Invoices']),
-        "Outstanding Invoices Change": "-7%",
-        "Current": int(latest['Outstanding_Invoices'] * 0.5),
-        "Days 1-30": int(latest['Outstanding_Invoices'] * 0.33),
-        "Days 30+": int(latest['Outstanding_Invoices'] * 0.17),
-        "Current MRR": 857144,
-        "Current ARR": 10285728,
-        "YoY Growth": 24.7,
-        "Churn Rate": 2.3,
+        "Outstanding Invoices": int(ar_balance),
+        "Outstanding Invoices Change": f"{'+' if ar_change >= 0 else ''}{ar_change:.1f}%",
+        "Current": int(ar_balance * 0.5),
+        "Days 1-30": int(ar_balance * 0.33),
+        "Days 30+": int(ar_balance * 0.17),
+        "Current MRR": int(mrr),
+        "Current ARR": int(arr),
+        "YoY Growth": round(yoy_growth, 1),
+        "Churn Rate": churn_rate,
     }
 
 
-def get_default_financial_overview() -> dict:
+def get_fallback_financial_overview() -> dict:
+    """Fallback values when no data is available."""
     return {
-        "Cash on Hand": 4285721,
-        "Cash on Hand Change": "+2.4%",
-        "Operating Account": 2142860,
-        "Reserve Account": 1428574,
-        "Investment": 714287,
-        "Monthly Burn": 342857,
-        "Monthly Burn Change": "-2%",
-        "Runway": 12.5,
-        "Runway Change": "+3 months",
-        "Runway Note": "Projected runway based on current burn rate",
-        "Outstanding Invoices": 857144,
-        "Outstanding Invoices Change": "-7%",
-        "Current": 428572,
-        "Days 1-30": 285715,
-        "Days 30+": 142857,
-        "Current MRR": 857144,
-        "Current ARR": 10285728,
-        "YoY Growth": 24.7,
-        "Churn Rate": 2.3,
+        "Cash on Hand": 0,
+        "Cash on Hand Change": "N/A",
+        "Operating Account": 0,
+        "Reserve Account": 0,
+        "Investment": 0,
+        "Monthly Burn": 0,
+        "Monthly Burn Change": "N/A",
+        "Runway": 0,
+        "Runway Change": "N/A",
+        "Runway Note": "No data available",
+        "Outstanding Invoices": 0,
+        "Outstanding Invoices Change": "N/A",
+        "Current": 0,
+        "Days 1-30": 0,
+        "Days 30+": 0,
+        "Current MRR": 0,
+        "Current ARR": 0,
+        "YoY Growth": 0,
+        "Churn Rate": 0,
     }
 
 
 def get_expense_categories() -> dict:
-    return {"Payroll": 48, "Operations": 14, "Other": 8, "Marketing": 18, "Software": 12}
+    """Calculate expense categories from actual OPEX data."""
+    raw_data = load_raw_dataframe()
+    if raw_data is None or raw_data.empty:
+        return get_fallback_expense_categories()
+    
+    latest = raw_data.iloc[-1]
+    total_opex = latest.get('Operating Expenses (OPEX)', 0)
+    
+    if total_opex <= 0:
+        return get_fallback_expense_categories()
+    
+    # Calculate expense breakdown from available data
+    expense_breakdown = {}
+    
+    # Map available data to expense categories
+    capex = latest.get('Capital Expenditure (CapEx)', 0)
+    if capex > 0:
+        expense_breakdown['CapEx'] = capex
+    
+    opex = latest.get('Operational Expenditure (OpEx)', 0)
+    if opex > 0:
+        expense_breakdown['OpEx'] = opex
+    
+    # Calculate payroll as percentage of OPEX (typical 60-70% of OPEX)
+    payroll_estimate = total_opex * 0.65
+    expense_breakdown['Payroll'] = payroll_estimate
+    
+    # Calculate other categories as percentages of remaining OPEX
+    remaining_opex = total_opex - sum(expense_breakdown.values())
+    if remaining_opex > 0:
+        expense_breakdown['Operations'] = remaining_opex * 0.25
+        expense_breakdown['Marketing'] = remaining_opex * 0.20
+        expense_breakdown['Software'] = remaining_opex * 0.15
+        expense_breakdown['Other'] = remaining_opex * 0.40
+    
+    # Calculate percentages
+    expense_percentages = {}
+    for category, amount in expense_breakdown.items():
+        percentage = (amount / total_opex) * 100
+        expense_percentages[category] = round(percentage, 1)
+    
+    return expense_percentages
+
+
+def get_fallback_expense_categories() -> dict:
+    """Fallback expense categories when no data is available."""
+    return {
+        "Payroll": 0,
+        "Operations": 0,
+        "Marketing": 0,
+        "Software": 0,
+        "Other": 0,
+        "CapEx": 0,
+        "OpEx": 0
+    }
 
 
 def get_anomalies() -> list[dict]:
@@ -122,33 +207,93 @@ def get_anomalies() -> list[dict]:
 
 
 def get_budget_data() -> dict:
-    data = load_cfo_data()
-    if data is None or data.empty:
-        return {
-            "Total Budget": 4850000,
-            "Actual Spend": 4327650,
-            "Remaining Budget": 522350,
-            "Burn Rate": 481961,
-            "Variances": {"Software": 28, "Marketing": -15, "Salaries": 12, "Travel": -32, "Equipment": 8},
-        }
+    """Calculate budget data and variances from actual financial data."""
+    raw_data = load_raw_dataframe()
+    if raw_data is None or raw_data.empty:
+        return get_fallback_budget_data()
 
-    df = data.copy()
-    current_burn = df.iloc[-1]['Burn_Rate']
-    monthly_burn = current_burn * 30
+    df = raw_data.copy()
+    latest = df.iloc[-1]
+    
+    # Calculate budget metrics from actual data
+    cash_outflows = latest.get('Cash Outflows', 0)
+    monthly_burn = cash_outflows
     total_budget = monthly_burn * 12
     days_passed = len(df)
-    actual_spend = current_burn * days_passed
+    actual_spend = cash_outflows * days_passed
+    
+    # Calculate actual variances from budget vs actual data
+    variances = calculate_actual_variances(latest, df)
+    
     return {
         "Total Budget": int(total_budget),
         "Actual Spend": int(actual_spend),
         "Remaining Budget": int(total_budget - actual_spend),
-        "Burn Rate": int(current_burn),
+        "Burn Rate": int(cash_outflows),
+        "Variances": variances,
+    }
+
+
+def calculate_actual_variances(latest, df) -> dict:
+    """Calculate actual budget variances from financial data."""
+    variances = {}
+    
+    # Revenue variance (Budget vs Actual)
+    revenue_actual = latest.get('Revenue (Actual)', 0)
+    revenue_budget = latest.get('Revenue (Budget / Forecast)', 0)
+    
+    if revenue_budget > 0:
+        revenue_variance = ((revenue_actual - revenue_budget) / revenue_budget) * 100
+        variances['Revenue'] = round(revenue_variance, 1)
+    
+    # COGS variance (as percentage of revenue)
+    cogs_actual = latest.get('Cost of Goods Sold (COGS)', 0)
+    if revenue_actual > 0:
+        cogs_percentage = (cogs_actual / revenue_actual) * 100
+        # Compare against 30% target (industry standard)
+        cogs_variance = cogs_percentage - 30
+        variances['COGS'] = round(cogs_variance, 1)
+    
+    # OPEX variance (as percentage of revenue)
+    opex_actual = latest.get('Operating Expenses (OPEX)', 0)
+    if revenue_actual > 0:
+        opex_percentage = (opex_actual / revenue_actual) * 100
+        # Compare against 25% target
+        opex_variance = opex_percentage - 25
+        variances['OPEX'] = round(opex_variance, 1)
+    
+    # EBITDA margin variance
+    ebitda_actual = latest.get('EBITDA', 0)
+    if revenue_actual > 0:
+        ebitda_percentage = (ebitda_actual / revenue_actual) * 100
+        # Compare against 15% target
+        ebitda_variance = ebitda_percentage - 15
+        variances['EBITDA'] = round(ebitda_variance, 1)
+    
+    # Gross margin variance
+    gross_profit = latest.get('Gross Profit', 0)
+    if revenue_actual > 0:
+        gross_margin = (gross_profit / revenue_actual) * 100
+        # Compare against 40% target
+        gross_variance = gross_margin - 40
+        variances['Gross Margin'] = round(gross_variance, 1)
+    
+    return variances
+
+
+def get_fallback_budget_data() -> dict:
+    """Fallback budget data when no data is available."""
+    return {
+        "Total Budget": 0,
+        "Actual Spend": 0,
+        "Remaining Budget": 0,
+        "Burn Rate": 0,
         "Variances": {
-            "Software": int(np.random.normal(15, 10)),
-            "Marketing": int(np.random.normal(-5, 15)),
-            "Salaries": int(np.random.normal(8, 12)),
-            "Travel": int(np.random.normal(-20, 15)),
-            "Equipment": int(np.random.normal(5, 8)),
+            "Revenue": 0,
+            "COGS": 0,
+            "OPEX": 0,
+            "EBITDA": 0,
+            "Gross Margin": 0
         },
     }
 
