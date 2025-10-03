@@ -7,10 +7,15 @@ from pages import Budgeting_Forecasting, Insights, CFO_Dashboard, AI_Assistant
 
 
 st.set_page_config(
-    page_title="CFO Dashboard PoC",
-    page_icon="T",
+    page_title="ThrivvAI CFO Dashboard",
+    page_icon="",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://thrivvai.com/support',
+        'Report a bug': 'https://thrivvai.com/bug-report',
+        'About': 'ThrivvAI CFO Dashboard - Advanced Financial Analytics Platform'
+    }
 )
 
 

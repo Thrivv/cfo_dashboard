@@ -176,7 +176,7 @@ def generate_llm_forecast_insights(forecast_data: str, department: str, start_da
         str: LLM-generated insights about the forecast.
     """
     try:
-        from services.chatbot_llm_services import run_chatbot_job
+        from services.chat_services import run_chatbot_job
         
         df = parse_forecast_data(forecast_data)
         if df is None or df.empty:

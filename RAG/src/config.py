@@ -6,7 +6,7 @@ load_dotenv(dotenv_path='/home/ubuntu/cfo_dashboard/.env')
 # Qdrant
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-QDRANT_COLLECTION = "financial_docs"
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "financial_docs")
 
 # Redis
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -22,4 +22,4 @@ COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 # Runpod VLLM endpoint
 RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY")
-RUNPOD_ENDPOINT_ID = "lkbk4plvvt0vah"
+RUNPOD_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID", "lkbk4plvvt0vah")

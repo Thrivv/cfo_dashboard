@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
-from services.forecast_llm_services import run_forecast_job
-from services.data_loader_service import get_data_loader
+from services.forecast_services import run_forecast_job
+from utils import get_data_loader
 from services.graph_services import display_forecast_chart
 
 
@@ -164,23 +164,53 @@ def render():
         st.markdown('<div class="panel"><div class="section-title">Revenue Forecasting with LagLlama</div>', unsafe_allow_html=True)
         
         # AI Controls
-        ai_col1, ai_col2 = st.columns([3, 1])
+        col1, col2, col3, col4 = st.columns([2,1,1,1])
         
-        with ai_col1:
+        with col1:
             # AI-specific department selector
             ai_departments = ['Sales', 'Marketing', 'IT', 'HR', 'Finance','Operations']
-            ai_selected_dept = st.selectbox("Select Department for Forecast", ai_departments, key="ai_dept_selector")
-            prompt = f"Generate revenue forecast for {ai_selected_dept} department for 13 months"
+            ai_selected_dept = st.selectbox("Department", ai_departments, key="ai_dept_selector")
+            
+        with col2:
+            display_start_date = st.date_input(
+                "Start Date",
+                value=datetime(2025, 10, 1).date(),
+                min_value=datetime(2024, 12, 31).date(),
+                max_value=datetime(2026,1 , 24).date(),
+                key="forecast_display_start_date"
+            )
 
+        with col3:
+            display_end_date = st.date_input(
+                "End Date",
+                value=datetime(2025, 10, 31).date(),
+                min_value=datetime(2024, 12, 31).date(),
+                max_value=datetime(2026, 1, 24).date(),
+                key="forecast_display_end_date"
+            )
         
-        with ai_col2:
-            if st.button("Generate Forecast", type="primary", key="ai_generate"):
-                # Use the new forecast service
-                with st.spinner("Generating revenue forecast..."):
-                    result = run_forecast_job(prompt)
-                    if result:
-                        st.session_state.forecast_result = result
-                        st.rerun()
+        with col4:
+            st.write("") # V-align
+            st.write("")
+            generate_button = st.button("Forecast", type="primary", key="ai_generate")
+
+        spinner_placeholder = st.empty()
+
+        if generate_button:
+            with spinner_placeholder.container():
+                st.markdown("<img src='https://i.gifer.com/origin/34/34338d26023e5515f6cc8969aa027bca.gif' width='50'> *Generating forecast...*", unsafe_allow_html=True)
+            
+            prompt = f"Generate revenue forecast for {ai_selected_dept} department for 13 months"
+            result = run_forecast_job(prompt)
+            if result:
+                st.session_state.forecast_result = result
+                st.rerun()
+
+        # Ensure display_end_date is not before display_start_date
+        if display_start_date > display_end_date:
+            st.error("Error: Forecast end date cannot be before the start date.")
+            display_start_date = datetime(2024, 12, 31).date()
+            display_end_date = datetime(2025, 12, 26).date()
         
         # Display AI Results
         if 'forecast_result' in st.session_state:
@@ -192,33 +222,6 @@ def render():
                 forecast_text = forecast_data['forecast_data']
             else:
                 forecast_text = str(forecast_data)
-            
-            # Date range selection for displaying the forecast chart
-            st.markdown("**Filter Forecast Date Range:**")
-            col_start_display, col_end_display = st.columns(2)
-            
-            with col_start_display:
-                display_start_date = st.date_input(
-                    "Forecast Start Date",
-                    value=datetime(2025, 10, 1).date(),
-                    min_value=datetime(2024, 12, 31).date(),
-                    max_value=datetime(2026,1 , 24).date(),
-                    key="forecast_display_start_date"
-                )
-            with col_end_display:
-                display_end_date = st.date_input(
-                    "Forecast End Date",
-                    value=datetime(2025, 10, 31).date(),
-                    min_value=datetime(2024, 12, 31).date(),
-                    max_value=datetime(2026, 1, 24).date(),
-                    key="forecast_display_end_date"
-                )
-
-            # Ensure display_end_date is not before display_start_date
-            if display_start_date > display_end_date:
-                st.error("Error: Forecast end date cannot be before the start date.")
-                display_start_date = datetime(2024, 12, 31).date()
-                display_end_date = datetime(2025, 12, 26).date()
 
             # Show forecast insights
             from services.graph_services import generate_forecast_insights
@@ -249,7 +252,7 @@ def render():
                 st.rerun()
         
         else:
-            st.info("Select a department and click 'Generate Forecast' to generate revenue forecast.")
+            st.info("Select a department, desired date range and click 'Forecast' to generate revenue forecast.")
         
         st.markdown('</div>', unsafe_allow_html=True)
 

@@ -4,10 +4,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from datetime import datetime
-from services.kpi_service import load_cfo_data, load_raw_dataframe
+from utils import load_cfo_data, load_raw_dataframe
 from components.alert_card import render_cfo_alerts_section
 from components.data_filter import apply_filters, parse_date_column, get_filter_summary, validate_filters, parse_quarterly_date
-from services.forecast_llm_services import ForecastPreviewService
+from services.forecast_services import ForecastPreviewService
 
 
 def _apply_plot_theme(fig: go.Figure, height: int = 340, title: str | None = None) -> go.Figure:

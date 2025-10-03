@@ -1,5 +1,51 @@
 [server]
+# Disable file watcher for better performance in production
 fileWatcherType = "none"
+# Enable CORS for API calls
+enableCORS = true
+# Enable XSRF protection
+enableXsrfProtection = true
+# Set max upload size (10MB for CSV files)
+maxUploadSize = 10
 
 [global]
+# Disable development mode for production
 developmentMode = false
+# Show deprecation warnings
+showWarningOnDirectExecution = true
+
+[browser]
+# Gather usage statistics
+gatherUsageStats = false
+
+[theme]
+# Dark theme for professional look
+base = "dark"
+primaryColor = "#ff4b4b"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#fafafa"
+
+[client]
+# Show error details
+showErrorDetails = true
+# Toolbar mode
+toolbarMode = "minimal"
+
+[logger]
+# Log level
+level = "info"
+# Message format
+messageFormat = "%(asctime)s.%(msecs)03d %(levelname)s: %(message)s"
+
+[runner]
+# Fast reruns
+fastReruns = true
+# Enforce usage of the main thread
+enforceUsageWithMainThread = true
+
+[cache]
+# Disable caching for development (can be enabled for production)
+disable = false
+# Cache directory
+directory = ".streamlit/cache"

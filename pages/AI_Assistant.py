@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-from services.data_loader_service import get_data_loader
-from services.chatbot_llm_services import process_financial_question
-from services.forecast_llm_services import run_forecast_job
-from services.database_service import save_chat_message
+from utils import get_data_loader
+from services.chat_services import process_financial_question
+from services.forecast_services import run_forecast_job
+from utils import save_chat_message
 from services.graph_services import display_forecast_chart
 from RAG.query_doc import query_documents
 
@@ -162,7 +162,6 @@ def render():
 
     col_main, col_side = st.columns([2.2, 1])
     with col_main:
-        st.markdown('<div class="panel"><div class="chat-title">CFO AI Assistant - ERP Analytics</div>', unsafe_allow_html=True)
         chat_container = st.container()
         with chat_container:
             if st.session_state.ai_chat_history:
@@ -241,8 +240,6 @@ def render():
             st.session_state.ai_chat_history = []
             st.session_state.processing_question = False
             st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
         
         # Define button_disabled for quick questions
         button_disabled = st.session_state.get('processing_question', False)

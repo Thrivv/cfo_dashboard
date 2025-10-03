@@ -254,7 +254,7 @@ def render_cfo_alerts_section(latest_raw, raw_df):
                 # Get LLM response silently
                 with st.spinner("KraYa analyzing..."):
                     try:
-                        from services.chatbot_llm_services import process_financial_question
+                        from services.chat_services import process_financial_question
                         llm_response = process_financial_question(st.session_state.alert_question)
                         
                         # Display the response in a styled container without titles

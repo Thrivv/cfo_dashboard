@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Tuple
 import pandas as pd
 
-from . import kpi_service
+# kpi_service import removed - functions were unused
 
 
 def generate_insights(df: pd.DataFrame, raw_df: pd.DataFrame | None = None) -> List[Dict[str, Any]]:
@@ -94,9 +94,6 @@ def explain_kpi(kpi: str, change_value: float, df: pd.DataFrame) -> List[str]:
     return explanations
 
 
-def overview_and_alerts(period: str = "Last 30 Days") -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
-    """Convenience function to get overview and derived alerts in one call."""
-    overview = kpi_service.get_financial_overview(period)
-    return overview, check_alerts(overview)
+# overview_and_alerts function removed - was unused and depended on deleted kpi_service functions
 
 
