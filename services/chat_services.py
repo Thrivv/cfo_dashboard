@@ -3,6 +3,7 @@ import time
 import os
 from dotenv import load_dotenv
 from utils import get_chunk_service
+from prompts import get_system_prompt, get_retry_prompt
 
 # Load environment variables
 load_dotenv()
@@ -93,32 +94,8 @@ def process_financial_question(question):
         if not chunk_data or chunk_data == "No data chunks available":
             return "No financial data available for analysis."
         
-        # Create prompt with financial data context
-        prompt = f"""Answer in MAXIMUM 150 WORDS. Be extremely brief.
-
-DATA:
-{chunk_data}
-
-QUESTION:
-{question}
-
-FORMAT:
-Key Findings:
-👉 Item 1 with exact values
-👉 Item 2 with exact values
-👉 Item 3 with exact values
-
-Conclusion: 1-2 sentences with insights
-
-RULES:
-• Use exact values from data
-• MAXIMUM 150 WORDS - count and stop at 150
-• Use arrows (👉) instead of bullet points
-• CRITICAL: Each arrow item must be on a separate line
-• Start each arrow item on a new line
-• Be direct and professional
-• No tools or functions
-"""
+        # Create prompt with financial data context using dynamic prompt
+        prompt = get_system_prompt(chunk_data, question)
 
         # Get AI response
         response = run_chatbot_job(prompt)
@@ -135,17 +112,8 @@ RULES:
         
         # Filter out tool calls and JSON responses
         if response_str.startswith('{"tool":') or response_str.startswith('{'):
-            # If response is a tool call, ask for direct analysis
-            retry_prompt = f"""Answer directly: {question}
-            
-            MAXIMUM 150 WORDS. Format as:
-            Key Findings:
-            👉 Item 1 with exact values
-            👉 Item 2 with exact values
-            
-            Conclusion: 1-2 sentences
-            
-            CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions."""
+            # If response is a tool call, ask for direct analysis using dynamic retry prompt
+            retry_prompt = get_retry_prompt(question)
             
             retry_response = run_chatbot_job(retry_prompt)
             if isinstance(retry_response, dict) and 'generated_text' in retry_response:
