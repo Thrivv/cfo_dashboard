@@ -13,6 +13,8 @@ def select_template(query: str) -> str:
         return "ar_opportunity_summary"
     if "opportunity" in query_lower and ("account payable" in query_lower or "payables" in query_lower):
         return "ap_opportunity_summary"
+    if any(keyword in query_lower for keyword in ["payment status", "status summary", "payment summary", "invoice status", "payment overview", "billing status"]):
+        return "payment_status_template"
     return "qa_template"
 
 def query_documents(query: str):

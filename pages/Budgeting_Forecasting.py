@@ -142,7 +142,7 @@ def render():
                     forecast_dates = pd.date_range(start=dates[-1] + timedelta(days=30), periods=3, freq='ME')
                     fig.add_trace(go.Scatter(x=forecast_dates, y=forecast_values, mode='lines+markers', name='Forecast', line=dict(color='#e74c3c', dash='dash')))
                     
-                    fig = _apply_plot_theme(fig, height=300, title=f'{selected_dept} Spend Forecast (12M Historical)')
+                    fig = _apply_plot_theme(fig, height=300, title=f'{selected_dept} Spend Forecast')
                     st.plotly_chart(fig, use_container_width=True)
             else:
                 # All departments analysis chart

@@ -4,3 +4,20 @@ pandas>=2.0.0
 numpy>=1.24.0
 plotly>=5.15.0
 requests>=2.31.0
+
+# Core
+qdrant-client
+
+transformers
+sentence-transformers
+cohere
+pymupdf
+redis
+pydantic
+fastapi
+uvicorn
+python-dotenv
+requests
+
+# Utils
+tqdm

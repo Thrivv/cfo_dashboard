@@ -83,7 +83,7 @@ def call_vllm(prompt: str, max_tokens: int = 1024) -> str:
             return "Error: Failed to submit job to LLM."
 
         # Step 2: Poll for the result with timeout
-        max_attempts = 40  # ~120 seconds total
+        max_attempts = 100  # ~300 seconds total (5 minutes)
         attempts = 0
         while attempts < max_attempts:
             try:
@@ -135,7 +135,7 @@ def call_vllm(prompt: str, max_tokens: int = 1024) -> str:
             except requests.exceptions.RequestException as e:
                 return f"Error checking LLM status: {e}"
 
-        return "Error: LLM request timed out after 120 seconds."
+        return "Error: LLM request timed out after 300 seconds (5 minutes)."
 
     except requests.exceptions.RequestException as e:
         return f"Error communicating with LLM service: {e}"
