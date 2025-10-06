@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path='/home/ubuntu/cfo_dashboard/.env')
+load_dotenv(dotenv_path='/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/.env')
 
 # Qdrant
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

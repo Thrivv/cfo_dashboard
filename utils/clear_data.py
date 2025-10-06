@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import redis
 from qdrant_client import QdrantClient
 
-from src.config import (
+from utils.config import (
     QDRANT_URL,
     QDRANT_API_KEY,
     QDRANT_COLLECTION,

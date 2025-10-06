@@ -1,16 +1,50 @@
 import streamlit as st
+import pandas as pd
 import sys
 import os
+from datetime import datetime, timedelta
+import plotly.express as px
 
 # Add RAG directory to path for due tables and insights
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG')))
-from due_tables import generate_due_tables
-from generate_insights import generate_insights
-
+from services.due_tables import generate_due_tables, get_payment_risk_data, get_invoice_summary, view_risk_invoices
+from services.generate_insights import generate_insights
 
 def render():
-    """Render insights page"""
-    st.title("Financial Insights")
+    st.subheader("📊 Accounts Payable / Receivable Insights")
+
+    try:
+        due_data = generate_due_tables()
+        ar_df = due_data["AR_df"]
+        ap_df = due_data["AP_df"]
+
+        # Top section with risk score and invoice summary
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Payment Delay Risk Score")
+            risk_data = get_payment_risk_data(ar_df)
+            
+            fig = px.pie(risk_data["risk_distribution"], names='Risk', values='Count', title='Payment Delay Risk Distribution')
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.warning(f"High risk of payment delays detected in {risk_data['high_risk_count']} invoices totalling {risk_data['high_risk_total']:.2f} AED")
+            
+            if st.button("View Risk Invoices"):
+                st.dataframe(view_risk_invoices(risk_data["high_risk_invoices"]))
+
+        with col2:
+            st.subheader("Invoice Summary")
+            summary_data = get_invoice_summary(ar_df, ap_df)
+            
+            fig = px.bar(summary_data["summary_df"], x='Type', y='Total Amount (AED)', title='Total Invoice Amounts')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.metric(label="Account Payable", value=f"{summary_data['ap_total']/1e6:.1f}M AED")
+            st.metric(label="Account Receivable", value=f"{summary_data['ar_total']/1e6:.1f}M AED")
+    
+    except Exception as e:
+        st.error(f"An error occurred while generating AP/AR tables: {e}")
+
 
     # ===============================
     # Append Due Tables
@@ -18,20 +52,21 @@ def render():
     st.subheader("📊 Accounts Payable / Receivable Insights")
     try:
         due_data = generate_due_tables()
-        ap_due_table = due_data.get("AP_Due")
-        ar_due_table = due_data.get("AR_Due")
+        ap_due_df = due_data.get("AP_Due")
+        ar_due_df = due_data.get("AR_Due")
 
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Account Payables Due")
-            if ap_due_table:
-                st.markdown(ap_due_table)
+            if not ap_due_df.empty:
+                st.dataframe(ap_due_df)
             else:
                 st.info("No Account Payables data available.")
+
         with col2:
             st.subheader("Account Receivables Due")
-            if ar_due_table:
-                st.markdown(ar_due_table)
+            if not ar_due_df.empty:
+                st.dataframe(ar_due_df)
             else:
                 st.info("No Account Receivables data available.")
     except Exception as e:
