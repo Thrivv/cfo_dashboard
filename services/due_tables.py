@@ -5,8 +5,8 @@ def generate_due_tables():
     today = datetime.now()
 
     # Load AR and AP
-    ar_df = pd.read_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AR_Invoice.csv")
-    ap_df = pd.read_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AP_Invoice.csv")
+    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
 
     # Convert dates
     ar_df["Due Date"] = pd.to_datetime(ar_df["Due Date"])
