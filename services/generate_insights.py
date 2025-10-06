@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.pipeline import query_rag
-from services.due_tables import generate_due_tables, get_correct_time_payers
+from services.due_tables import generate_due_tables, get_correct_time_payers, get_top_ar_overdue, get_top_ap_overdue
 
 def generate_insights():
     # Get AR/AP tables and AR_df
@@ -19,10 +19,14 @@ def generate_insights():
     # Get top on-time payers
     top_payers = get_correct_time_payers(ar_df)
 
+    # Get top overdue invoices for warnings
+    top_ar_overdue = get_top_ar_overdue(ar_df, top_n=2)
+    top_ap_overdue = get_top_ap_overdue(ap_df, top_n=2)
+
     # --- Warnings Generation ---
     ar_warning_query = f"""
 Based on these overdue AR invoices:
-{ar_table}
+{top_ar_overdue}
 
 Generate exactly 2 AR warnings, each max 3 lines.
 Include customer, invoice number, overdue days, Article reference, and why it matters.
@@ -31,7 +35,7 @@ Include customer, invoice number, overdue days, Article reference, and why it ma
 
     ap_warning_query = f"""
 Based on these overdue AP invoices:
-{ap_table}
+{top_ap_overdue}
 
 Generate exactly 2 AP warnings, each max 3 lines.
 Include supplier, invoice number, overdue days, PO T&C clause/regulation, and why it matters.
