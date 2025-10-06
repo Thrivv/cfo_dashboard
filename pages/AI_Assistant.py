@@ -5,7 +5,7 @@ from services.chat_services import process_financial_question
 from services.forecast_services import run_forecast_job
 from utils import save_chat_message
 from services.graph_services import display_forecast_chart
-from RAG.query_doc import query_documents
+from services.query_doc import query_documents
 
 
 def suggest_questions():

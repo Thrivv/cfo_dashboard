@@ -2,29 +2,18 @@ import json
 import uuid
 from qdrant_client.models import PointStruct
 
-try:
-    # Try relative imports first (when imported as package)
-    from .parser import parse_pdf, parse_csv
-    from .chunker import chunk_text
-    from .embedding import embed_texts
-    from .vectorstore_qdrant import init_collection, upsert_embeddings, search
-    from .rerank import rerank
-    from .llm_client import call_vllm
-    from .redis_client import store_metadata, get_metadata
-except ImportError:
-    # Fallback to absolute imports (when imported directly)
-    from parser import parse_pdf, parse_csv
-    from chunker import chunk_text
-    from embedding import embed_texts
-    from vectorstore_qdrant import init_collection, upsert_embeddings, search
-    from rerank import rerank
-    from llm_client import call_vllm
-    from redis_client import store_metadata, get_metadata
+from utils.parser import parse_pdf, parse_csv
+from utils.chunker import chunk_text
+from utils.embedding import embed_texts
+from utils.vectorstore_qdrant import init_collection, upsert_embeddings, search
+from utils.rerank import rerank
+from utils.llm_client import call_vllm
+from utils.redis_client import store_metadata, get_metadata
 
 
 def load_template(template_name: str) -> str:
     """Load template string from insight_templates.json"""
-    with open("RAG/prompts/insights.json", "r") as f:
+    with open("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
 
@@ -58,6 +47,8 @@ def ingest_document(path: str, metadata: dict):
     upsert_embeddings(points_to_upsert)
 
 
+from datetime import datetime, timedelta
+
 def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
@@ -71,10 +62,10 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     reranked = rerank(query, docs)
 
     # Manually add all relevant data to the context (truncated for performance)
-    invoice_ar_md = parse_csv("RAG/data/AR_Invoice.csv")[0]
-    invoice_ap_md = parse_csv("RAG/data/AP_Invoice.csv")[0]
-    po_terms_text = parse_pdf("RAG/data/PO_T&C.pdf")
-    regulations_text = parse_pdf("RAG/data/RPSR_RPSCSR_UAE.pdf")
+    invoice_ar_md = parse_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AR_Invoice.csv")[0]
+    invoice_ap_md = parse_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AP_Invoice.csv")[0]
+    po_terms_text = parse_pdf("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/PO_T&C.pdf")
+    regulations_text = parse_pdf("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf")
 
     # Truncate large documents to prevent timeout
     max_length = 5000
@@ -84,7 +75,7 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     regulations_text = regulations_text[:max_length] + "..." if len(regulations_text) > max_length else regulations_text
 
     context_parts = [
-        "Accounts Receivable Data:",
+        "Accounts Receivable Invoice Data:",
         invoice_ar_md,
         "Accounts Payable Data:",
         invoice_ap_md,
@@ -93,11 +84,36 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
         "Regulations:",
         regulations_text,
         "Retrieved Context:",
-        "\n\n".join(reranked[:5]),  # Limit to top 5 results
+        "\n\n".join(reranked[:2]),  # Limit to top 5 results
     ]
 
+    AR_context =["Accounts Receivable Invoice Data:",
+        invoice_ar_md,
+        "Regulations:",
+        regulations_text,
+        "Retrieved Context:",
+        "\n\n".join(reranked[:2])]
+    
+    AP_context =["Accounts Payable Invoice Data:",
+        invoice_ap_md,
+        "Purchase Order Terms:",
+        po_terms_text,
+        "Regulations:",
+        regulations_text,
+        "Retrieved Context:",
+        "\n\n".join(reranked[:2])]
+
     context = "\n\n".join(context_parts)
+    AR_context = "\n\n".join(AR_context)
+    AP_context = "\n\n".join(AP_context)
     template = load_template(template_name)
-    prompt = template.format(context=context, query=query)
+
+    now = datetime.now()
+    current_date_str = now.strftime("%Y-%m-%d")
+    date_plus_6_days_str = (now + timedelta(days=6)).strftime("%Y-%m-%d")
+    template = template.replace("{current_date}", current_date_str)
+    template = template.replace("{current_date_plus_6_days}", date_plus_6_days_str)
+    
+    prompt = template.format(context=context, query=query, AR_context=AR_context, AP_context=AP_context)
 
     return call_vllm(prompt, max_tokens=1024)
