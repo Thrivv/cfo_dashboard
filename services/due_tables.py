@@ -14,9 +14,12 @@ def generate_due_tables():
     ap_df["Due Date"] = pd.to_datetime(ap_df["Due Date"])
 
     # --- AR Overdue ---
-    ar_overdue = ar_df[ar_df["Payment Status"].str.lower() == "overdue"].copy()
-    ar_overdue["Overdue Days"] = (today - ar_overdue["Due Date"]).dt.days
-    top_4_ar = ar_overdue.nlargest(5, "Overdue Days")
+   # --- AR Overdue ---
+    ar_pending = ar_df[(ar_df["Payment Status"].str.lower() == "not paid") &
+                       (ar_df["Due Date"] > today) &
+                       (ar_df["Due Date"] <= today + timedelta(days=15))].copy()
+    ar_pending["Days Remaining"] = (ar_pending["Due Date"] - today).dt.days
+    top_4_ar = ar_pending.nsmallest(5, "Due Date")
 
     # --- AP Nearing Due ---
     ap_pending = ap_df[(ap_df["Payment Status"].str.lower() == "not paid") &
