@@ -4,7 +4,7 @@ from utils import get_data_loader
 from services.chat_services import process_financial_question
 from services.forecast_services import run_forecast_job
 from utils import save_chat_message
-from services.graph_services import display_forecast_chart
+from services.forecast_services import display_forecast_chart
 from RAG.query_doc import query_documents
 
 
@@ -199,7 +199,7 @@ def render():
                     
                     # Add forecast insights to the main message if available
                     if "Forecast Generated" in response_text and forecast_data:
-                        from services.graph_services import generate_forecast_insights
+                        from services.forecast_services import generate_forecast_insights
                         insights = generate_forecast_insights(
                             forecast_data, 
                             forecast_department

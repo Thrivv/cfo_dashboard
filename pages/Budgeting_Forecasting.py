@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 from services.forecast_services import run_forecast_job
 from utils import get_data_loader
-from services.graph_services import display_forecast_chart
+from services.forecast_services import display_forecast_chart
 
 
 
@@ -224,7 +224,7 @@ def render():
                 forecast_text = str(forecast_data)
 
             # Show forecast insights
-            from services.graph_services import generate_forecast_insights
+            from services.forecast_services import generate_forecast_insights
             insights = generate_forecast_insights(forecast_text, ai_selected_dept, pd.Timestamp(display_start_date), pd.Timestamp(display_end_date))
             # st.markdown("#### Forecast Insights")
             st.markdown(insights, unsafe_allow_html=True)
