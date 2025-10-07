@@ -223,9 +223,9 @@ def get_filter_summary(filtered_df, filters):
             else:
                 summary['active_filters'].append(f"Date Range: {start_date} to {end_date}")
     
-    # Check period filter
-    period = filters.get('period', 'Monthly')
-    if period and period != "Monthly":
+    # Check period filter - only show if it's been explicitly changed from default
+    period = filters.get('period', 'Yearly')  # Updated default to match new default
+    if period and period != "Yearly":  # Only show if not the default
         summary['active_filters'].append(f"Period: {period}")
     
     return summary
@@ -246,7 +246,7 @@ def validate_filters(filters):
         'start_date': None,
         'end_date': None,
         'date_range': None,
-        'period': "Monthly"
+        'period': "Yearly"
     }
     
     # Merge with defaults

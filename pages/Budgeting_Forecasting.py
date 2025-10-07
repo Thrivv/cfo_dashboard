@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 from services.forecast_services import run_forecast_job
 from utils import get_data_loader
-from services.forecast_services import display_forecast_chart
+from services.forecast_services import create_forecast_chart_with_plotly
 
 
 
@@ -77,7 +77,7 @@ def render():
         with col1:
             # Department Spend Analysis - Text and Metrics
             st.markdown('<div class="chart-container"><div class="section-title">Department Spend Analysis</div>', unsafe_allow_html=True)
-            st.markdown('**Purpose:** Track department spending patterns and forecast future expenses using 12-month historical data.<br/>**Insight:** Compare spending trends across departments and predict budget requirements for better resource allocation.', unsafe_allow_html=True)
+            st.markdown('**Purpose:** Track department spending patterns and forecast future expenses using 2 years historical data.<br/>**Insight:** Compare spending trends across departments and predict budget requirements for better resource allocation.', unsafe_allow_html=True)
             
             if selected_dept != 'All Departments':
                 dept_data = raw_df[raw_df['Business Unit / Department'] == selected_dept]
@@ -224,22 +224,23 @@ def render():
                 forecast_text = str(forecast_data)
 
             # Show forecast insights
-            from services.forecast_services import generate_forecast_insights
-            insights = generate_forecast_insights(forecast_text, ai_selected_dept, pd.Timestamp(display_start_date), pd.Timestamp(display_end_date))
+            from services.forecast_services import generate_llm_forecast_insights
+            insights = generate_llm_forecast_insights(forecast_text, ai_selected_dept, pd.Timestamp(display_start_date), pd.Timestamp(display_end_date))
             # st.markdown("#### Forecast Insights")
             st.markdown(insights, unsafe_allow_html=True)
             
             # Show forecast chart
             st.markdown("#### Forecast Chart")
-            chart_success = display_forecast_chart(
+            fig = create_forecast_chart_with_plotly(
                 forecast_text,
                 ai_selected_dept,
-                chart_type="plotly",
                 chart_height=400,
                 start_date=pd.Timestamp(display_start_date), # Convert to Timestamp for graph_services
                 end_date=pd.Timestamp(display_end_date) # Convert to Timestamp for graph_services
             )
-            if not chart_success:
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
                 st.info("No chartable forecast data found for the selected display range.")
             
             # Show raw output (minimal)
