@@ -535,7 +535,7 @@ RULES:
                 insights = llm_response['generated_text']
             else:
                 insights = str(llm_response)
-                insights = _format_llm_output(insights, department)
+                # insights = _format_llm_output(insights, department)
             
             if _validate_llm_output(insights):              
                 return _format_llm_output(insights, department)
