@@ -83,13 +83,17 @@ def process_question(question, data):
             # Use chatbot service for financial analysis questions
             response = process_financial_question(question)
             
+            # Generate insights
+            from services.insights_service import generate_insights
+            insights = generate_insights(data)
+
             # Handle dict response (extract generated_text if it's a dict)
             if isinstance(response, dict) and 'generated_text' in response:
-                return response['generated_text']
+                return {"text": response['generated_text'], "insights": insights}
             elif isinstance(response, str):
-                return response
+                return {"text": response, "insights": insights}
             else:
-                return str(response)
+                return {"text": str(response), "insights": insights}
     except Exception as e:
         return f"Error processing your question: {str(e)}. Please try again."
 
@@ -199,8 +203,8 @@ def render():
                     
                     # Add forecast insights to the main message if available
                     if "Forecast Generated" in response_text and forecast_data:
-                        from services.forecast_services import generate_llm_forecast_insights
-                        insights = generate_llm_forecast_insights(
+                        from services.forecast_services import generate_chatbot_forecast_insights
+                        insights = generate_chatbot_forecast_insights(
                             forecast_data, 
                             forecast_department
                         )
@@ -215,7 +219,6 @@ def render():
                         create_forecast_chart(
                             forecast_data, 
                             forecast_department,
-                            chart_type="streamlit",
                             chart_height=200
                         )
                         

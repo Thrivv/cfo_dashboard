@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 import requests
@@ -10,7 +9,7 @@ import streamlit as st
 import re
 from utils import get_data_loader
 
-# from forecast_llm_services
+
 load_dotenv()
 API_KEY = os.getenv("RUNPOD_API_KEY")
 ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID")
@@ -58,7 +57,6 @@ def run_forecast_job(prompt, sampling_params=None):
         else:
             time.sleep(1)
 
-# from forecast_service
 class ForecastPreviewService:
     """Service for generating forecast previews for homepage."""
     
@@ -164,7 +162,8 @@ class ForecastPreviewService:
         except Exception as e:
             return {"error": str(e)}
 
-# from graph_services
+
+
 def parse_forecast_data(forecast_text: str) -> Optional[pd.DataFrame]:
     """
     Parse forecast data from text and return DataFrame for charting.
@@ -207,6 +206,7 @@ def parse_forecast_data(forecast_text: str) -> Optional[pd.DataFrame]:
         print(f"Error parsing forecast data: {e}")
         return None
 
+# for Streamlit chart (Homepage)
 def create_forecast_chart(forecast_data: str, department: str, chart_height: int = 200) -> bool:
     """
     Create a line chart for forecast data using Streamlit.
@@ -238,6 +238,7 @@ def create_forecast_chart(forecast_data: str, department: str, chart_height: int
         st.error(f"Error creating chart: {e}")
         return False
 
+# for Plotly chart (Budgeting_Forecasting page)
 def create_forecast_chart_with_plotly(forecast_data: str, department: str, chart_height: int = 400, start_date: Optional[pd.Timestamp] = None, end_date: Optional[pd.Timestamp] = None):
     """
     Create a line chart for forecast data using Plotly (for Budgeting_Forecasting page).
@@ -422,6 +423,7 @@ def _format_llm_output(insights: str, department: str) -> str:
     
     return formatted_insights
 
+# Generate LLM-powered insights about the forecast data in forecast tab
 def generate_llm_forecast_insights(forecast_data: str, department: str, start_date: Optional[pd.Timestamp] = None, end_date: Optional[pd.Timestamp] = None, max_retries: int = 3) -> str:
     """
     Generate LLM-powered insights about the forecast data with validation and retries.
@@ -466,5 +468,78 @@ def generate_llm_forecast_insights(forecast_data: str, department: str, start_da
         
         return "Error: Unable to generate valid insights after multiple attempts."
         
+    except Exception as e:  
+        return f"Error generating LLM insights: {str(e)}"
+
+# generate insights for chatbot AI assistant
+def generate_chatbot_forecast_insights(forecast_data: str, department: str,max_retries: int = 3) -> str:
+    try:
+        from services.chat_services import run_chatbot_job
+        
+        df = parse_forecast_data(forecast_data)
+        if df is None or df.empty:
+            return "Unable to generate insights: No forecast data available."
+        
+        if df.empty:
+            return "No forecast data available for the selected date range to generate insights."
+
+        forecast_values = df['Value'].values
+        min_value, max_value, avg_value = forecast_values.min(), forecast_values.max(), forecast_values.mean()
+        trend = (forecast_values[-1] - forecast_values[0]) / forecast_values[0] * 100 if forecast_values[0] > 0 else 0
+        volatility = forecast_values.std()
+        volatility_pct = (volatility / avg_value * 100) if avg_value > 0 else 0
+        
+        peak_idx, trough_idx = forecast_values.argmax(), forecast_values.argmin()
+        peak_date, trough_date = df.iloc[peak_idx]['Date'], df.iloc[trough_idx]['Date']
+        
+        data_summary = f"""FORECAST DATA FOR {department.upper()} DEPARTMENT:
+Forecast Period: {len(df)} days
+Average Value: ${avg_value:,.0f}
+Range: ${min_value:,.0f} - ${max_value:,.0f}
+Trend: {trend:+.1f}% change
+Volatility: {volatility_pct:.1f}%
+Peak: ${max_value:,.0f} on {peak_date.strftime('%Y-%m-%d')}
+Lowest: ${min_value:,.0f} on {trough_date.strftime('%Y-%m-%d')}
+
+Sample Forecast Values:
+{df.head(10).to_string(index=False)}
+
+Recent Values:
+{df.tail(5).to_string(index=False)}"""
+
+        prompt = f"""Analyze this forecast data and provide concise business insights for the {department} department, justify the insights as per{data_summary} provide breif explanation for the peak or unexpected trends.
+
+Provide insights in this format:
+Key Findings:
+👉 [Insight 1 with specific values, provide justification]
+👉 [Insight 2 with specific values, provide possible cause]
+
+Conclusion:
+[2-3 sentence summary of the key findings and their implications.]
+
+RULES:
+• Use exact values from the data.
+• MAXIMUM 100 WORDS for Key Findings - count and stop at 100.
+• Use arrows (👉) for Key Findings.
+• Each arrow item must be on a separate line.
+• EXACTLY 3 insights in Key Findings.
+• Be extremely brief and direct.
+• Focus on key trends only.
+• Output must be plain text only — no Markdown, no LaTeX, no styled fonts.
+• The Conclusion must be a concise summary (2-3 sentences)."""
+
+        for attempt in range(max_retries):
+            llm_response = run_chatbot_job(prompt)
+            
+            if isinstance(llm_response, dict) and 'generated_text' in llm_response:
+                insights = llm_response['generated_text']
+            else:
+                insights = str(llm_response)
+                insights = _format_llm_output(insights, department)
+            
+            if _validate_llm_output(insights):              
+                return _format_llm_output(insights, department)
+        
+        return "Error: Unable to generate valid insights after multiple attempts."
     except Exception as e:  
         return f"Error generating LLM insights: {str(e)}"
