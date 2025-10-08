@@ -1,21 +1,10 @@
-import requests
-import time
-import os
-from dotenv import load_dotenv
+import runpod
 from utils import get_chunk_service
 from prompts import get_system_prompt, get_retry_prompt
+from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
-# Load environment variables
-load_dotenv()
-
-API_KEY = os.getenv("RUNPOD_API_KEY")
-ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID")
-BASE_URL = f"https://api.runpod.ai/v2/{ENDPOINT_ID}"
-
-headers = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
+runpod.api_key = RUNPOD_API_KEY
+endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
 
 def format_llm_response(response_text):
@@ -42,33 +31,23 @@ def run_chatbot_job(prompt):
     Args:
         prompt (str): User query or financial question
     """
-    data = {
-        "input": {
-            "prompt": prompt,
-            "application": "CFOChatbot",
-            "sampling_params": {
-                "temperature": 0.1,
-                "max_tokens": 512
-            }
-        }
-    }
-
-    # Step 1: Submit the job
-    response = requests.post(f"{BASE_URL}/run", headers=headers, json=data)
-    job = response.json()
-    job_id = job["id"]
-
-    # Step 2: Poll for the result
-    while True:
-        status_response = requests.get(f"{BASE_URL}/status/{job_id}", headers=headers)
-        status_json = status_response.json()
-
-        if status_json["status"] == "COMPLETED":
-            return status_json["output"]
-        elif status_json["status"] == "FAILED":
-            return f"Job failed: {status_json}"
-        else:
-            time.sleep(1)
+    try:
+        run_request = endpoint.run_sync(
+            {
+                "prompt": prompt,
+                "application": "CFOChatbot",
+                "sampling_params": {
+                    "temperature": 0.1,
+                    "max_tokens": 512
+                }
+            },
+            timeout=60,  # Timeout in seconds
+        )
+        return run_request
+    except TimeoutError:
+        return "Job timed out. Please try again."
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 def process_financial_question(question):
     """

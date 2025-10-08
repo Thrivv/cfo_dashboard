@@ -49,6 +49,8 @@ RULES:
 • Start each arrow item on a new line
 • Be direct and professional
 • No tools or functions
+• CRITICAL: Only use current data provided - do not reference outdated information
+• CRITICAL: If question is not about financial data (like personal questions, greetings, definitions), respond naturally without using financial data format
 """
 
 
@@ -71,59 +73,17 @@ Key Findings:
 
 Conclusion: 1-2 sentences
 
-CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions.
+CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions. Only use current data provided. If question is not about financial data, respond naturally without financial format.
 """
 
 
-def get_system_prompt_template() -> str:
+def get_greeting_prompt() -> str:
     """
-    Get the base system prompt template.
+    Get the greeting prompt for Krayra AI Assistant.
     
     Returns:
-        str: Base system prompt template
+        str: Greeting prompt
     """
-    return """Answer in MAXIMUM 150 WORDS. Be extremely brief.
-
-DATA:
-{chunk_data}
-
-QUESTION:
-{question}
-
-FORMAT:
-Key Findings:
-👉 Item 1 with exact values
-👉 Item 2 with exact values
-👉 Item 3 with exact values
-
-Conclusion: 1-2 sentences with insights
-
-RULES:
-• Use exact values from data
-• MAXIMUM 150 WORDS - count and stop at 150
-• Use arrows (👉) instead of bullet points
-• CRITICAL: Each arrow item must be on a separate line
-• Start each arrow item on a new line
-• Be direct and professional
-• No tools or functions
-"""
+    return "I am Krayra, your financial AI assistant. How can I help you with your financial analysis today?"
 
 
-def get_retry_prompt_template() -> str:
-    """
-    Get the retry prompt template.
-    
-    Returns:
-        str: Retry prompt template
-    """
-    return """Answer directly: {question}
-            
-MAXIMUM 150 WORDS. Format as:
-Key Findings:
-👉 Item 1 with exact values
-👉 Item 2 with exact values
-
-Conclusion: 1-2 sentences
-
-CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions.
-"""

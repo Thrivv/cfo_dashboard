@@ -11,6 +11,10 @@ venv/
 .env
 .env.*
 
+# Streamlit secrets
+secrets.toml
+.streamlit/secrets.toml
+
 # IDE / Editor
 .vscode/
 .idea/

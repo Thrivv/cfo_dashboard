@@ -237,6 +237,7 @@ def render():
         elif clear_clicked:
             st.session_state.ai_chat_history = []
             st.session_state.processing_question = False
+            # Clear the session state and let the page naturally refresh
             st.rerun()
         
         # Define button_disabled for quick questions

@@ -1,24 +1,14 @@
-import os
-from dotenv import load_dotenv
-import requests
-import time
+import runpod
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional
 import streamlit as st
 import re
 from utils import get_data_loader
+from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
-
-load_dotenv()
-API_KEY = os.getenv("RUNPOD_API_KEY")
-ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID")
-BASE_URL = f"https://api.runpod.ai/v2/{ENDPOINT_ID}"
-
-headers = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
+runpod.api_key = RUNPOD_API_KEY
+endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
 def run_forecast_job(prompt, sampling_params=None):
     """
@@ -28,34 +18,24 @@ def run_forecast_job(prompt, sampling_params=None):
         prompt (str): Forecasting query or request
         sampling_params (dict): Optional dict for temperature, max_tokens, etc.
     """
-    data = {
-        "input": {
+    try:
+        input_data = {
             "prompt": prompt,
             "application": "Forecasting"
         }
-    }
+        
+        if sampling_params:
+            input_data["sampling_params"] = sampling_params
 
-    if sampling_params:
-        data["input"]["sampling_params"] = sampling_params
-
-    # Step 1: Submit the job
-    response = requests.post(f"{BASE_URL}/run", headers=headers, json=data)
-    job = response.json()
-    job_id = job["id"]
-
-    # Step 2: Poll for the result
-    while True:
-        status_response = requests.get(f"{BASE_URL}/status/{job_id}", headers=headers)
-        status_json = status_response.json()
-
-        if status_json["status"] == "COMPLETED":
-            print(f"=== Forecasting Result ===")
-            print(status_json["output"])
-            return status_json["output"]
-        elif status_json["status"] == "FAILED":
-            raise RuntimeError(f"Forecast job failed: {status_json}")
-        else:
-            time.sleep(1)
+        run_request = endpoint.run_sync(
+            input_data,
+            timeout=60,  # Timeout in seconds
+        )
+        return run_request
+    except TimeoutError:
+        return "Job timed out. Please try again."
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 class ForecastPreviewService:
     """Service for generating forecast previews for homepage."""
