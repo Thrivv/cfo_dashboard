@@ -1,10 +1,12 @@
 import json
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-sys.path.append(os.path.dirname(__file__))
-from pipeline import query_rag
-from due_tables import generate_due_tables, get_correct_time_payers
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.pipeline import query_rag
+from services.due_tables import generate_due_tables, get_correct_time_payers, get_top_ar_overdue, get_top_ap_overdue
 
 def generate_insights():
     # Get AR/AP tables and AR_df
@@ -17,20 +19,36 @@ def generate_insights():
     # Get top on-time payers
     top_payers = get_correct_time_payers(ar_df)
 
+    # Get top overdue invoices for warnings
+    top_ar_overdue = get_top_ar_overdue(ar_df, top_n=2)
+    top_ap_overdue = get_top_ap_overdue(ap_df, top_n=2)
+
     # --- Warnings Generation ---
-    ar_warning_query = f"Based on the following overdue AR invoices:\n{ar_table}\nGenerate multiple one-line AR warnings comparing with Regulations (each line one warning)."
+    ar_warning_query = f"""
+Based on these overdue AR invoices:
+{top_ar_overdue}
+
+Generate exactly 2 AR warnings, each max 3 lines.
+Include customer, invoice number, overdue days, Article reference, and why it matters.
+"""
     ar_warnings = query_rag(ar_warning_query, template_name="ar_warning_summary")
 
-    ap_warning_query = f"Based on the following AP nearing-due invoices:\n{ap_table}\nGenerate multiple one-line AP warnings comparing with PO T&C (each line one warning)."
+    ap_warning_query = f"""
+Based on these overdue AP invoices:
+{top_ap_overdue}
+
+Generate exactly 2 AP warnings, each max 3 lines.
+Include supplier, invoice number, overdue days, PO T&C clause/regulation, and why it matters.
+"""
     ap_warnings = query_rag(ap_warning_query, template_name="ap_warning_summary")
 
     # --- Opportunities Generation ---
     ar_opp_context = f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}"
-    ar_opportunity_query = f"Generate multiple one-line AR opportunities using above data and Regulations."
+    ar_opportunity_query = f"Generate up to 2 AR opportunities, each max 3 lines, with regulation references."
     ar_opps = query_rag(ar_opportunity_query, template_name="ar_opportunity_summary")
 
     ap_opp_context = f"AP invoices nearing due:\n{ap_table}\nPO T&C document data available."
-    ap_opportunity_query = "Generate multiple one-line AP opportunities highlighting early payment benefits based on PO T&C."
+    ap_opportunity_query = "Generate up to 2 AP opportunities, each max 3 lines, with PO T&C references."
     ap_opps = query_rag(ap_opportunity_query, template_name="ap_opportunity_summary")
 
     final_output = {
@@ -47,4 +65,5 @@ def generate_insights():
     return final_output
 
 if __name__ == "__main__":
-    generate_insights()
+    insights = generate_insights()
+    print(json.dumps(insights, indent=2))

@@ -4,8 +4,8 @@ from utils import get_data_loader
 from services.chat_services import process_financial_question
 from services.forecast_services import run_forecast_job
 from utils import save_chat_message
-from services.forecast_services import create_forecast_chart
-from RAG.query_doc import query_documents
+from services.forecast_services import display_forecast_chart
+from services.query_doc import query_documents
 
 
 def suggest_questions():
@@ -33,11 +33,8 @@ def suggest_questions():
         # "Predict spending trends for Marketing",
         
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
-        "What are the overdue invoices?",
-        "Show me payment status summary",
-        "What are the payment service requirements?",
-        "What are the license categories?",
-        "What are the capital requirements?",
+        "What are the important considerations from retail system services and Card schemes regulations",
+        "What are the capital requirements?"
         
     ]
 
