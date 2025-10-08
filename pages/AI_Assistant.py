@@ -50,7 +50,7 @@ def is_forecast_question(question):
 
 def is_rag_question(question):
     """Check if the question is asking for document/invoice/regulation analysis."""
-    rag_keywords = ['invoice', 'payment', 'overdue', 'regulation', 'requirement', 'license', 'capital', 'warning', 'opportunity', 'account receivable', 'account payable', 'receivables', 'payables']
+    rag_keywords = ['invoice', 'payment', 'overdue', 'regulation', 'requirement', 'license', 'warning', 'opportunity', 'account receivable', 'account payable', 'receivables', 'payables', "Purchase orders", 'terms and conditions', 'discount', 'penalty', 'late fee', 'retail payment', 'card scheme']
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in rag_keywords)
 
