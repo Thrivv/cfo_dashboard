@@ -60,7 +60,11 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
-    docs = [get_metadata(r.payload["chunk_id"])["content"] for r in results]
+    docs = []
+    for r in results:
+        metadata = get_metadata(r.payload["chunk_id"])
+        if metadata and "content" in metadata:
+            docs.append(metadata["content"])
     reranked = rerank(query, docs)
 
     # Step 2: Load and preprocess data
