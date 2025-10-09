@@ -9,19 +9,20 @@ PROMPT_TYPES = {
     "system": "system_prompt",
     "retry": "retry_prompt",
     "financial": "financial_analysis",
-    "chat": "chat_response"
+    "chat": "chat_response",
 }
 
 # LLM settings (removed - using chat_services.py configuration)
 
+
 def get_system_prompt(chunk_data: str, question: str) -> str:
     """
     Generate dynamic system prompt for financial analysis.
-    
+
     Args:
         chunk_data (str): Financial data chunks
         question (str): User question
-        
+
     Returns:
         str: Formatted system prompt
     """
@@ -55,10 +56,10 @@ RULES:
 def get_retry_prompt(question: str) -> str:
     """
     Generate retry prompt for failed responses.
-    
+
     Args:
         question (str): User question
-        
+
     Returns:
         str: Retry prompt
     """
@@ -78,7 +79,7 @@ CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and prop
 def get_system_prompt_template() -> str:
     """
     Get the base system prompt template.
-    
+
     Returns:
         str: Base system prompt template
     """
@@ -112,7 +113,7 @@ RULES:
 def get_retry_prompt_template() -> str:
     """
     Get the retry prompt template.
-    
+
     Returns:
         str: Retry prompt template
     """
