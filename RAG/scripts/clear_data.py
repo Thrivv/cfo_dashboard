@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import redis
 from qdrant_client import QdrantClient
 
-from utils.config import (
+from src.config import (
     QDRANT_URL,
     QDRANT_API_KEY,
     QDRANT_COLLECTION,
@@ -17,7 +17,6 @@ from utils.config import (
     REDIS_PASSWORD,
 )
 
-
 def clear_qdrant():
     """Deletes the Qdrant collection."""
     try:
@@ -25,9 +24,7 @@ def clear_qdrant():
         client.delete_collection(collection_name=QDRANT_COLLECTION)
         print(f"✅ Qdrant collection '{QDRANT_COLLECTION}' deleted.")
     except Exception as e:
-        print(
-            f"⚠️ Qdrant collection '{QDRANT_COLLECTION}' could not be deleted. It might not exist. Error: {e}"
-        )
+        print(f"⚠️ Qdrant collection '{QDRANT_COLLECTION}' could not be deleted. It might not exist. Error: {e}")
 
 
 def clear_redis():
