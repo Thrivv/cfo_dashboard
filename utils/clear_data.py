@@ -12,6 +12,7 @@ from utils.config import (
     REDIS_PASSWORD,
 )
 
+
 def clear_all_qdrant():
     """Deletes all collections (and their vectors + metadata) in Qdrant."""
     try:
