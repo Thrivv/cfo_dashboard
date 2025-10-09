@@ -5,7 +5,7 @@ from services.chat_services import process_financial_question
 from services.forecast_services import run_forecast_job
 from utils import save_chat_message
 from services.forecast_services import create_forecast_chart
-from RAG.query_doc import query_documents
+from services.query_doc import query_documents
 
 
 def suggest_questions():
@@ -33,10 +33,7 @@ def suggest_questions():
         # "Predict spending trends for Marketing",
         
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
-        "What are the overdue invoices?",
-        "Show me payment status summary",
-        "What are the payment service requirements?",
-        "What are the license categories?",
+        "What are the important considerations from retail system services and Card schemes regulations",
         "What are the capital requirements?",
         
     ]
@@ -50,7 +47,9 @@ def is_forecast_question(question):
 
 def is_rag_question(question):
     """Check if the question is asking for document/invoice/regulation analysis."""
-    rag_keywords = ['invoice', 'payment', 'overdue', 'regulation', 'requirement', 'license', 'capital', 'warning', 'opportunity', 'account receivable', 'account payable', 'receivables', 'payables']
+    rag_keywords = [
+        'invoice', 'payment', 'overdue', 'regulation', 'license', 'warning','opportunity', 'account receivable', 'account payable', 'receivables', 'payables', 'purchase orders', 'po', 'terms and conditions', 't&c', 'discount', 'penalty', 'late fee', 'retail payment', 'card scheme', 'compliance', 'due date', 'settlement', 'financial obligation', 'supplier', 'vendor', 'customer', 'payment schedule', 'extended terms', 'regulatory requirement', 'reporting requirement', 'internal control', 'rps', 'penal interest', 'interest charge', 'late payment', 'guarantee', 'reminder notice',' capital requirements'
+    ]
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in rag_keywords)
 
@@ -83,17 +82,13 @@ def process_question(question, data):
             # Use chatbot service for financial analysis questions
             response = process_financial_question(question)
             
-            # Generate insights
-            from services.insights_service import generate_insights
-            insights = generate_insights(data)
-
             # Handle dict response (extract generated_text if it's a dict)
             if isinstance(response, dict) and 'generated_text' in response:
-                return {"text": response['generated_text'], "insights": insights}
+                return response['generated_text']
             elif isinstance(response, str):
-                return {"text": response, "insights": insights}
+                return response
             else:
-                return {"text": str(response), "insights": insights}
+                return str(response)
     except Exception as e:
         return f"Error processing your question: {str(e)}. Please try again."
 

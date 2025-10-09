@@ -102,8 +102,12 @@ class ForecastPreviewService:
             if raw_df is None or raw_df.empty:
                 return {"error": "No data available"}
             
-            # Get recent revenue data
-            revenue_data = raw_df['Revenue (Actual)'].tail(6).values
+            # Sort data by date to get proper chronological order
+            raw_df['Date'] = pd.to_datetime(raw_df['Date / Period'], errors='coerce')
+            raw_df_sorted = raw_df.sort_values('Date')
+            
+            # Get recent revenue data (last 6 months chronologically)
+            revenue_data = raw_df_sorted['Revenue (Actual)'].tail(6).values
             
             if len(revenue_data) < 2:
                 return {"error": "Insufficient data"}
@@ -111,6 +115,15 @@ class ForecastPreviewService:
             # Simple linear trend forecast
             x = np.arange(len(revenue_data))
             coeffs = np.polyfit(x, revenue_data, 1)
+            y_pred = np.polyval(coeffs, x)
+            
+            # Calculate R-squared
+            ss_res = np.sum((revenue_data - y_pred) ** 2)
+            ss_tot = np.sum((revenue_data - np.mean(revenue_data)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+            
+            # Calculate trend strength (0-100)
+            trend_strength = min(100, max(0, r_squared * 100))
             
             # Forecast next 3 months
             next_months = np.arange(len(revenue_data), len(revenue_data) + 3)
@@ -124,7 +137,9 @@ class ForecastPreviewService:
                 "current_revenue": current_revenue,
                 "next_month_forecast": next_month_revenue,
                 "growth_rate": growth_rate,
-                "forecast_months": forecast.tolist()
+                "forecast_months": forecast.tolist(),
+                "r_squared": r_squared,
+                "trend_strength": trend_strength
             }
         except Exception as e:
             return {"error": str(e)}
@@ -138,17 +153,27 @@ class ForecastPreviewService:
             if raw_df is None or raw_df.empty:
                 return {"error": "No data available"}
             
-            # Get recent cash flow data
-            cash_balance = raw_df['Cash Balance'].tail(6).values
-            cash_outflows = raw_df['Cash Outflows'].tail(6).values
+            # Sort data by date to get proper chronological order
+            raw_df['Date'] = pd.to_datetime(raw_df['Date / Period'], errors='coerce')
+            raw_df_sorted = raw_df.sort_values('Date')
+            
+            # Get recent cash flow data (last 6 months chronologically)
+            cash_balance = raw_df_sorted['Cash Balance'].tail(6).values
+            cash_outflows = raw_df_sorted['Cash Outflows'].tail(6).values
             
             if len(cash_balance) < 2:
                 return {"error": "Insufficient data"}
             
             # Calculate burn rate
-            avg_monthly_burn = np.mean(cash_outflows) * 30
+            avg_monthly_burn = np.mean(cash_outflows)
             current_cash = cash_balance[-1]
             runway_months = current_cash / avg_monthly_burn if avg_monthly_burn > 0 else 0
+            
+            # Calculate burn trend
+            if len(cash_outflows) >= 2:
+                burn_trend = ((cash_outflows[-1] - cash_outflows[0]) / max(cash_outflows[0], 1)) * 100
+            else:
+                burn_trend = 0
             
             # Simple forecast
             next_month_cash = current_cash - avg_monthly_burn
@@ -157,7 +182,8 @@ class ForecastPreviewService:
                 "current_cash": current_cash,
                 "monthly_burn": avg_monthly_burn,
                 "runway_months": runway_months,
-                "next_month_forecast": next_month_cash
+                "next_month_forecast": next_month_cash,
+                "burn_trend": burn_trend
             }
         except Exception as e:
             return {"error": str(e)}
