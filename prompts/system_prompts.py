@@ -16,29 +16,6 @@ PROMPT_TYPES = {
 # LLM settings (removed - using chat_services.py configuration)
 
 
-def is_financial_question(question: str) -> bool:
-    """Check if the question is related to financial data analysis.
-    
-    Args:
-        question (str): User question
-        
-    Returns:
-        bool: True if financial question, False otherwise
-    """
-    financial_keywords = [
-        'revenue', 'profit', 'loss', 'cash', 'liquidity', 'debt', 'equity',
-        'margin', 'ratio', 'forecast', 'budget', 'expense', 'income',
-        'balance sheet', 'income statement', 'cash flow', 'financial',
-        'earnings', 'assets', 'liabilities', 'roi', 'growth', 'decline',
-        'quarterly', 'annual', 'monthly', 'trend', 'analysis', 'kpi',
-        'metrics', 'performance', 'dso', 'collections', 'payables',
-        'receivables', 'inventory', 'turnover', 'leverage', 'ratios'
-    ]
-    
-    question_lower = question.lower()
-    return any(keyword in question_lower for keyword in financial_keywords)
-
-
 def get_system_prompt(chunk_data: str, question: str) -> str:
     """Generate dynamic system prompt for financial analysis.
 
@@ -49,10 +26,6 @@ def get_system_prompt(chunk_data: str, question: str) -> str:
     Returns:
         str: Formatted system prompt
     """
-    # Check if this is a financial question
-    if not is_financial_question(question):
-        return get_general_question_prompt(question)
-    
     return f"""Answer in MAXIMUM 150 WORDS. Be extremely brief.
 
 DATA:
@@ -77,6 +50,7 @@ RULES:
 • Be direct and professional
 • No tools or functions
 • CRITICAL: Only use current data provided - do not reference outdated information
+• CRITICAL: If question is not about financial data (like personal questions, greetings, definitions), respond naturally without using the financial data format.
 """
 
 
@@ -115,15 +89,7 @@ def get_general_question_prompt(question: str) -> str:
 
 {question}
 
-Guidelines:
-- Be helpful and informative
-- Keep responses concise but complete (max 200 words)
-- Use a friendly, professional tone
-- If you don't know something, say so
-- No special formatting, bullet points, or arrows needed
-- Respond as if having a normal conversation
-- Don't use "Key Findings" or structured format
-"""
+Please provide a clear, helpful response without any special formatting, bullet points, or structured layouts. Just answer naturally as you would in a conversation."""
 
 
 def get_greeting_prompt() -> str:

@@ -50,29 +50,47 @@ def run_chatbot_job(prompt):
 
 
 def process_financial_question(question):
-    """Process financial questions with data chunk integration.
+    """Process questions - financial or general.
 
     Args:
-        question (str): Financial question from user
+        question (str): Question from user
 
     Returns:
-        str: AI response based on financial data
+        str: AI response based on question type
     """
     try:
-        # Get chunk service and load data
-        chunk_service = get_chunk_service()
-        if not chunk_service._chunks:
-            if not chunk_service.load_and_chunk_data():
-                return "Unable to load financial data. Please ensure data is available."
+        # Check if question is financial-related
+        financial_keywords = [
+            'revenue', 'profit', 'loss', 'cash', 'debt', 'equity', 'assets', 'liabilities',
+            'income', 'expense', 'budget', 'forecast', 'financial', 'accounting', 'balance',
+            'statement', 'kpi', 'metric', 'ratio', 'margin', 'growth', 'decline', 'trend',
+            'quarterly', 'annual', 'monthly', 'fiscal', 'earnings', 'sales', 'cost',
+            'payable', 'receivable', 'inventory', 'investment', 'loan', 'credit',
+            'liquidity', 'solvency', 'leverage', 'roi', 'roa', 'roe', 'ebitda'
+        ]
+        
+        question_lower = question.lower()
+        is_financial = any(keyword in question_lower for keyword in financial_keywords)
+        
+        if not is_financial:
+            # Use general question prompt for non-financial questions
+            from prompts import get_general_question_prompt
+            prompt = get_general_question_prompt(question)
+        else:
+            # Get chunk service and load data for financial questions
+            chunk_service = get_chunk_service()
+            if not chunk_service._chunks:
+                if not chunk_service.load_and_chunk_data():
+                    return "Unable to load financial data. Please ensure data is available."
 
-        # Get all chunks formatted for LLM
-        chunk_data = chunk_service.get_all_chunks_for_llm()
+            # Get all chunks formatted for LLM
+            chunk_data = chunk_service.get_all_chunks_for_llm()
 
-        if not chunk_data or chunk_data == "No data chunks available":
-            return "No financial data available for analysis."
+            if not chunk_data or chunk_data == "No data chunks available":
+                return "No financial data available for analysis."
 
-        # Create prompt with financial data context using dynamic prompt
-        prompt = get_system_prompt(chunk_data, question)
+            # Create prompt with financial data context using dynamic prompt
+            prompt = get_system_prompt(chunk_data, question)
 
         # Get AI response
         response = run_chatbot_job(prompt)
