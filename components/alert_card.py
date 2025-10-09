@@ -15,9 +15,7 @@ def _generate_alert_question(alert):
             f"{alert_message}"
         )
     elif "leverage" in alert_type or "debt" in alert_type:
-        return (
-            f"How can I improve our debt-to-equity ratio? {alert_message}"
-        )
+        return f"How can I improve our debt-to-equity ratio? {alert_message}"
     elif "performance" in alert_type or "revenue" in alert_type:
         return (
             f"What strategies can help improve our financial performance? "
