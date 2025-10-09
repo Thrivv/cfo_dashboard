@@ -1,3 +1,5 @@
+"""UI components for alert cards in the CFO dashboard."""
+
 import streamlit as st
 
 
