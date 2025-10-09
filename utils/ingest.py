@@ -1,5 +1,7 @@
-import sys
+"""Data ingestion utilities for the CFO dashboard."""
+
 import os
+import sys
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

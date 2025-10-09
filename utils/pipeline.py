@@ -1,22 +1,26 @@
+"""RAG pipeline utilities for document processing."""
+
+from datetime import datetime, timedelta
 import json
 import uuid
-from datetime import datetime, timedelta
+
 import pandas as pd
 from qdrant_client.models import PointStruct
 
-# Local utility imports
-from utils.parser import parse_pdf, parse_csv
 from utils.chunker import chunk_text
 from utils.embedding import embed_texts
-from utils.vectorstore_qdrant import init_collection, upsert_embeddings, search
-from utils.rerank import rerank
 from utils.llm_client import call_vllm
-from utils.redis_client import store_metadata, get_metadata
+
+# Local utility imports
+from utils.parser import parse_csv, parse_pdf
+from utils.redis_client import get_metadata, store_metadata
+from utils.rerank import rerank
+from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
 
 
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
-    """Load the selected template from insights.json"""
+    """Load the selected template from insights.json."""
     with open("/home/ubuntu/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
@@ -24,7 +28,7 @@ def load_template(template_name: str) -> str:
 
 # -------- Ingestion Pipeline --------
 def ingest_document(path: str, metadata: dict):
-    """Embed and index documents (PDF or CSV) into Qdrant"""
+    """Embed and index documents (PDF or CSV) into Qdrant."""
     if path.endswith(".pdf"):
         text = parse_pdf(path)
         chunks = chunk_text(text)
@@ -43,11 +47,7 @@ def ingest_document(path: str, metadata: dict):
         store_metadata(chunk_id, full_metadata)
 
         points_to_upsert.append(
-            PointStruct(
-                id=chunk_id,
-                vector=vector,
-                payload={"chunk_id": chunk_id}
-            )
+            PointStruct(id=chunk_id, vector=vector, payload={"chunk_id": chunk_id})
         )
 
     upsert_embeddings(points_to_upsert)
@@ -55,8 +55,7 @@ def ingest_document(path: str, metadata: dict):
 
 # -------- Query Pipeline (Unified RAG + Invoice Logic) --------
 def query_rag(query: str, template_name: str = "default", top_k: int = 20):
-    """Main RAG query pipeline with intelligent invoice filtering and context composition"""
-    
+    """Main RAG query pipeline with intelligent invoice filtering and context composition."""
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
@@ -66,6 +65,7 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
         if metadata and "content" in metadata:
             docs.append(metadata["content"])
     reranked = rerank(query, docs)
+    top_matches = "\n\n".join(reranked[:2])
 
     # Step 2: Load and preprocess data
     ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
@@ -94,6 +94,7 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
                 return "Upcoming"
             else:
                 return "Future"
+
         df["Status"] = df.apply(status_fn, axis=1)
         return df
 
@@ -114,7 +115,9 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     def truncate(txt, max_len=5000):
         return txt[:max_len] + "..." if len(txt) > max_len else txt
 
-    ar_csv, ap_csv = truncate(ar_filtered.to_csv(index=False)), truncate(ap_filtered.to_csv(index=False))
+    ar_csv, ap_csv = truncate(ar_filtered.to_csv(index=False)), truncate(
+        ap_filtered.to_csv(index=False)
+    )
     po_text, reg_text = truncate(po_text), truncate(reg_text)
 
     # Step 6: Build full context
@@ -132,21 +135,32 @@ Regulatory Context:
 {reg_text}
 
 Retrieved Context (Top Matches):
-{'\n\n'.join(reranked[:2])}
+{top_matches}
 """
 
-    AR_context = "\n\n".join([
-        "Accounts Receivable Invoice Data:", ar_csv,
-        "Regulations:", reg_text,
-        "Retrieved Context:", "\n\n".join(reranked[:2])
-    ])
+    AR_context = "\n\n".join(
+        [
+            "Accounts Receivable Invoice Data:",
+            ar_csv,
+            "Regulations:",
+            reg_text,
+            "Retrieved Context:",
+            top_matches,
+        ]
+    )
 
-    AP_context = "\n\n".join([
-        "Accounts Payable Invoice Data:", ap_csv,
-        "Purchase Order Terms:", po_text,
-        "Regulations:", reg_text,
-        "Retrieved Context:", "\n\n".join(reranked[:2])
-    ])
+    AP_context = "\n\n".join(
+        [
+            "Accounts Payable Invoice Data:",
+            ap_csv,
+            "Purchase Order Terms:",
+            po_text,
+            "Regulations:",
+            reg_text,
+            "Retrieved Context:",
+            top_matches,
+        ]
+    )
 
     # Step 7: Template formatting
     template = load_template(template_name)
@@ -162,7 +176,7 @@ Retrieved Context (Top Matches):
         AR_context=AR_context,
         AP_context=AP_context,
         regulations_context=reg_text,
-        PO_context=po_text
+        PO_context=po_text,
     )
 
     # Step 8: Call LLM (Runpod / vLLM)
