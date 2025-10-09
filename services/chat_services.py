@@ -2,54 +2,12 @@
 
 import runpod
 
-from prompts import get_retry_prompt, get_system_prompt, get_general_question_prompt
+from prompts import get_retry_prompt, get_system_prompt
 from utils import get_chunk_service
 from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
 runpod.api_key = RUNPOD_API_KEY
 endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
-
-
-def is_financial_question(question):
-    """Determine if a question is financial or general.
-    
-    Args:
-        question (str): User question
-        
-    Returns:
-        bool: True if financial question, False if general question
-    """
-    question_lower = question.lower()
-    
-    # Financial keywords
-    financial_keywords = [
-        'revenue', 'profit', 'loss', 'cash', 'budget', 'forecast', 'expense',
-        'income', 'balance', 'sheet', 'statement', 'financial', 'accounting',
-        'kpi', 'metric', 'ratio', 'margin', 'growth', 'debt', 'equity',
-        'liquidity', 'solvency', 'roi', 'ebitda', 'p&l', 'accounts payable',
-        'accounts receivable', 'inventory', 'assets', 'liabilities', 'capital',
-        'investment', 'funding', 'valuation', 'earnings', 'dividend',
-        'cash flow', 'working capital', 'leverage', 'dso', 'dpo', 'turnover'
-    ]
-    
-    # Check if question contains financial keywords
-    for keyword in financial_keywords:
-        if keyword in question_lower:
-            return True
-    
-    # Check for general question patterns
-    general_patterns = [
-        'what is', 'how does', 'explain', 'define', 'tell me about',
-        'machine learning', 'artificial intelligence', 'technology',
-        'hello', 'hi', 'greetings', 'how are you', 'who are you'
-    ]
-    
-    for pattern in general_patterns:
-        if pattern in question_lower:
-            return False
-    
-    # Default to financial if unclear
-    return True
 
 
 def format_llm_response(response_text):
@@ -92,34 +50,29 @@ def run_chatbot_job(prompt):
 
 
 def process_financial_question(question):
-    """Process questions with appropriate prompt based on question type.
+    """Process financial questions with data chunk integration.
 
     Args:
-        question (str): Question from user (financial or general)
+        question (str): Financial question from user
 
     Returns:
-        str: AI response based on question type
+        str: AI response based on financial data
     """
     try:
-        # Determine if question is financial or general
-        if not is_financial_question(question):
-            # Use general question prompt for non-financial questions
-            prompt = get_general_question_prompt(question)
-        else:
-            # Use financial data for financial questions
-            chunk_service = get_chunk_service()
-            if not chunk_service._chunks:
-                if not chunk_service.load_and_chunk_data():
-                    return "Unable to load financial data. Please ensure data is available."
+        # Get chunk service and load data
+        chunk_service = get_chunk_service()
+        if not chunk_service._chunks:
+            if not chunk_service.load_and_chunk_data():
+                return "Unable to load financial data. Please ensure data is available."
 
-            # Get all chunks formatted for LLM
-            chunk_data = chunk_service.get_all_chunks_for_llm()
+        # Get all chunks formatted for LLM
+        chunk_data = chunk_service.get_all_chunks_for_llm()
 
-            if not chunk_data or chunk_data == "No data chunks available":
-                return "No financial data available for analysis."
+        if not chunk_data or chunk_data == "No data chunks available":
+            return "No financial data available for analysis."
 
-            # Create prompt with financial data context using dynamic prompt
-            prompt = get_system_prompt(chunk_data, question)
+        # Create prompt with financial data context using dynamic prompt
+        prompt = get_system_prompt(chunk_data, question)
 
         # Get AI response
         response = run_chatbot_job(prompt)
