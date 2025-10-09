@@ -1,3 +1,5 @@
+"""Data clearing utilities for the CFO dashboard."""
+
 from qdrant_client import QdrantClient
 import redis
 

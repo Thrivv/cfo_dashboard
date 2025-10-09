@@ -1,3 +1,5 @@
+"""Configuration settings for the CFO dashboard."""
+
 import os
 
 from dotenv import load_dotenv

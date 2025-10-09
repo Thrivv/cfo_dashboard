@@ -33,7 +33,10 @@ def _generate_alert_question(alert):
     elif "operational" in alert_type or "efficiency" in alert_type:
         return f"What operational improvements should I focus on? {alert_message}"
     else:
-        return f"Can you provide insights and recommendations about this alert: {alert_message}"
+        return (
+            f"Can you provide insights and recommendations about this alert: "
+            f"{alert_message}"
+        )
 
 
 def _generate_critical_alerts(metrics):

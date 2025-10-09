@@ -1,3 +1,5 @@
+"""Insights page for financial analysis and reporting."""
+
 import os
 import sys
 
@@ -19,6 +21,7 @@ from services.generate_insights import generate_insights
 
 
 def render():
+    """Render the insights page with financial analysis and reporting."""
     st.subheader("📊 Accounts Payable / Receivable Insights")
 
     due_data = generate_due_tables()

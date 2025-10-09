@@ -1,3 +1,5 @@
+"""Forecast services for financial modeling and prediction."""
+
 import os
 import re
 from typing import Dict, Optional
