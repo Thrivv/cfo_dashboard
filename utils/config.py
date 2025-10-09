@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 
 # Try to load from .env first (for backward compatibility)
-load_dotenv(dotenv_path='/home/ubuntu/cfo_dashboard/.env')
+load_dotenv(dotenv_path="/home/ubuntu/cfo_dashboard/.env")
+
 
 def get_secret(key, default=None):
     """Get secret from Streamlit secrets or environment variables as fallback."""
@@ -12,6 +13,7 @@ def get_secret(key, default=None):
     except (KeyError, AttributeError):
         # Fallback to environment variables
         return os.getenv(key, default)
+
 
 # Qdrant
 QDRANT_URL = get_secret("QDRANT_URL", "http://localhost:6333")

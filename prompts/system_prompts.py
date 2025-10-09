@@ -9,19 +9,20 @@ PROMPT_TYPES = {
     "system": "system_prompt",
     "retry": "retry_prompt",
     "financial": "financial_analysis",
-    "chat": "chat_response"
+    "chat": "chat_response",
 }
 
 # LLM settings (removed - using chat_services.py configuration)
 
+
 def get_system_prompt(chunk_data: str, question: str) -> str:
     """
     Generate dynamic system prompt for financial analysis.
-    
+
     Args:
         chunk_data (str): Financial data chunks
         question (str): User question
-        
+
     Returns:
         str: Formatted system prompt
     """
@@ -43,7 +44,6 @@ Conclusion: 1-2 sentences with insights
 
 RULES:
 • Use exact values from data
-• MAXIMUM 150 WORDS - count and stop at 150
 • Use arrows (👉) instead of bullet points
 • CRITICAL: Each arrow item must be on a separate line
 • Start each arrow item on a new line
@@ -57,10 +57,10 @@ RULES:
 def get_retry_prompt(question: str) -> str:
     """
     Generate retry prompt for failed responses.
-    
+
     Args:
         question (str): User question
-        
+
     Returns:
         str: Retry prompt
     """
@@ -80,10 +80,8 @@ CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and prop
 def get_greeting_prompt() -> str:
     """
     Get the greeting prompt for Krayra AI Assistant.
-    
+
     Returns:
         str: Greeting prompt
     """
     return "I am Krayra, your financial AI assistant. How can I help you with your financial analysis today?"
-
-

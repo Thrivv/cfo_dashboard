@@ -1,6 +1,7 @@
 import runpod
 import os
 import re
+
 try:
     from .config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 except ImportError:
@@ -20,20 +21,22 @@ def clean_output(text: str) -> str:
     if generated_text_match:
         content = generated_text_match.group(1)
         # Unescape newlines and other escape sequences
-        content = content.replace('\\n', '\n').replace('\\t', '\t')
+        content = content.replace("\\n", "\n").replace("\\t", "\t")
         return content.strip()
-    
+
     # Try single quotes pattern as fallback
     generated_text_match = re.search(r"'generated_text':\s*'([^']*)'", text)
     if generated_text_match:
         content = generated_text_match.group(1)
         # Unescape newlines and other escape sequences
-        content = content.replace('\\n', '\n').replace('\\t', '\t')
+        content = content.replace("\\n", "\n").replace("\\t", "\t")
         return content.strip()
 
     # Fallback: clean the raw text
     # Remove repeated "User Question:" / "Answer:" blocks
-    cleaned = re.sub(r"(User Question:.*?Answer:)", "", text, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(
+        r"(User Question:.*?Answer:)", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
 
     # Strip technical junk like raw tokens output
     cleaned = re.sub(r"'tokens':\s*\[.*?\]", "", cleaned, flags=re.DOTALL)
@@ -42,7 +45,7 @@ def clean_output(text: str) -> str:
     cleaned = cleaned.strip()
 
     # Remove duplicate lines, preserving order
-    lines = cleaned.split('\n')
+    lines = cleaned.split("\n")
     seen = set()
     unique_lines = []
     for line in lines:
@@ -51,7 +54,7 @@ def clean_output(text: str) -> str:
             seen.add(line_stripped)
             unique_lines.append(line)
 
-    cleaned = '\n'.join(unique_lines)
+    cleaned = "\n".join(unique_lines)
     return cleaned if cleaned else "No valid response received from LLM."
 
 
@@ -65,12 +68,12 @@ def call_vllm(prompt: str, max_tokens: int = 512) -> str:
                 "sampling_params": {
                     "temperature": 0,
                     "max_tokens": max_tokens,
-                    "repetition_penalty": 1.2
-                }
+                    "repetition_penalty": 1.2,
+                },
             },
             timeout=300,  # Timeout in seconds (5 minutes)
         )
-        
+
         if not run_request:
             return "Error: No output from LLM."
 
@@ -78,14 +81,16 @@ def call_vllm(prompt: str, max_tokens: int = 512) -> str:
             # Primary expected format: [{'choices': [{'tokens': ['...']}]}]
             if isinstance(run_request, list) and run_request:
                 first_item = run_request[0]
-                if isinstance(first_item, dict) and 'choices' in first_item:
-                    choices = first_item.get('choices')
+                if isinstance(first_item, dict) and "choices" in first_item:
+                    choices = first_item.get("choices")
                     if isinstance(choices, list) and choices:
                         first_choice = choices[0]
                         if isinstance(first_choice, dict):
-                            tokens = first_choice.get('tokens')
+                            tokens = first_choice.get("tokens")
                             if isinstance(tokens, list):
-                                response_text = "".join(str(token) for token in tokens).strip()
+                                response_text = "".join(
+                                    str(token) for token in tokens
+                                ).strip()
                                 return clean_output(response_text)
 
             # Fallback for simpler string or dict outputs
