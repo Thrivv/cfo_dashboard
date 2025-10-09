@@ -26,7 +26,7 @@ convention = "google"
 max-complexity = 10
 
 [tool.ruff.lint.pycodestyle]
-max-function-length = 200  # Max lines per function
+max-line-length = 200  # Max lines per function
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
