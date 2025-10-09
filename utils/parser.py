@@ -1,3 +1,5 @@
+"""Data parsing utilities for the CFO dashboard."""
+
 import csv
 
 import fitz  # PyMuPDF

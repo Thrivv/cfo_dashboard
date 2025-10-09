@@ -1,3 +1,5 @@
+"""Embedding utilities for vector operations."""
+
 import logging
 
 from sentence_transformers import SentenceTransformer

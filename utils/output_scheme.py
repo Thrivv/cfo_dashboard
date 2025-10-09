@@ -1,3 +1,5 @@
+"""Output schema definitions for the CFO dashboard."""
+
 from typing import List
 
 from pydantic import BaseModel

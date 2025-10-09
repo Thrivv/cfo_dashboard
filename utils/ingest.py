@@ -1,3 +1,5 @@
+"""Data ingestion utilities for the CFO dashboard."""
+
 import os
 import sys
 

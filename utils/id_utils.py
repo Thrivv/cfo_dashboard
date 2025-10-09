@@ -1,3 +1,5 @@
+"""ID generation utilities for the CFO dashboard."""
+
 import hashlib
 import random
 import time

@@ -1,3 +1,5 @@
+"""RAG pipeline utilities for document processing."""
+
 from datetime import datetime, timedelta
 import json
 import uuid
