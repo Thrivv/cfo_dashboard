@@ -3,7 +3,10 @@ import logging
 
 logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
 
-from utils.config import EMBEDDING_MODEL
+try:
+    from .config import EMBEDDING_MODEL
+except ImportError:
+    from config import EMBEDDING_MODEL
 
 _model = SentenceTransformer(EMBEDDING_MODEL)
 
