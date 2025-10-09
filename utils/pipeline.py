@@ -1,22 +1,24 @@
+from datetime import datetime, timedelta
 import json
 import uuid
-from datetime import datetime, timedelta
+
 import pandas as pd
 from qdrant_client.models import PointStruct
 
-# Local utility imports
-from utils.parser import parse_pdf, parse_csv
 from utils.chunker import chunk_text
 from utils.embedding import embed_texts
-from utils.vectorstore_qdrant import init_collection, upsert_embeddings, search
-from utils.rerank import rerank
 from utils.llm_client import call_vllm
-from utils.redis_client import store_metadata, get_metadata
+
+# Local utility imports
+from utils.parser import parse_csv, parse_pdf
+from utils.redis_client import get_metadata, store_metadata
+from utils.rerank import rerank
+from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
 
 
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
-    """Load the selected template from insights.json"""
+    """Load the selected template from insights.json."""
     with open("/home/ubuntu/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
@@ -24,7 +26,7 @@ def load_template(template_name: str) -> str:
 
 # -------- Ingestion Pipeline --------
 def ingest_document(path: str, metadata: dict):
-    """Embed and index documents (PDF or CSV) into Qdrant"""
+    """Embed and index documents (PDF or CSV) into Qdrant."""
     if path.endswith(".pdf"):
         text = parse_pdf(path)
         chunks = chunk_text(text)
@@ -51,8 +53,7 @@ def ingest_document(path: str, metadata: dict):
 
 # -------- Query Pipeline (Unified RAG + Invoice Logic) --------
 def query_rag(query: str, template_name: str = "default", top_k: int = 20):
-    """Main RAG query pipeline with intelligent invoice filtering and context composition"""
-
+    """Main RAG query pipeline with intelligent invoice filtering and context composition."""
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)

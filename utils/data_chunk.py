@@ -1,6 +1,8 @@
-import pandas as pd
 import json
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+
 from .data_loader import get_data_loader
 
 
@@ -14,8 +16,7 @@ class DataChunkService:
         self._total_records = 0
 
     def load_and_chunk_data(self) -> bool:
-        """
-        Load data and split into 5 chunks for LLM processing.
+        """Load data and split into 5 chunks for LLM processing.
 
         Returns:
             bool: True if data loaded and chunked successfully
@@ -105,8 +106,7 @@ class DataChunkService:
             return {"chunk_number": chunk_num, "error": str(e)}
 
     def get_chunk(self, chunk_number: int) -> Optional[Dict[str, Any]]:
-        """
-        Get a specific data chunk.
+        """Get a specific data chunk.
 
         Args:
             chunk_number: Chunk number (1-5)
@@ -143,8 +143,7 @@ class DataChunkService:
         }
 
     def get_chunk_for_llm(self, chunk_number: int) -> str:
-        """
-        Get a data chunk formatted for LLM consumption.
+        """Get a data chunk formatted for LLM consumption.
 
         Args:
             chunk_number: Chunk number (1-5)
@@ -199,7 +198,7 @@ SAMPLE RECORDS:
                 llm_format += f"Record {i}: {record}\n"
 
         # Add aggregated summary statistics
-        llm_format += f"""
+        llm_format += """
 
 AGGREGATED SUMMARY:
 """

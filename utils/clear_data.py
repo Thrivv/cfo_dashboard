@@ -1,15 +1,13 @@
-import sys
-import os
-import redis
 from qdrant_client import QdrantClient
-from qdrant_client.http import models
+import redis
+
 from utils.config import (
-    QDRANT_URL,
     QDRANT_API_KEY,
+    QDRANT_URL,
     REDIS_HOST,
+    REDIS_PASSWORD,
     REDIS_PORT,
     REDIS_USERNAME,
-    REDIS_PASSWORD,
 )
 
 

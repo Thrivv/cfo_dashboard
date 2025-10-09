@@ -1,14 +1,14 @@
-import pandas as pd
 from datetime import datetime, timedelta
+
+import pandas as pd
 
 
 def generate_due_tables():
-    """
-    Loads AR/AP CSVs, parses dates/amounts and returns:
-      - AR_Due: not-paid AR invoices due within next 15 days (sorted earliest first)
-      - AP_Due: not-paid AP invoices due within next 15 days (sorted earliest first)
-      - AR_df: full AR dataframe (cleaned)
-      - AP_df: full AP dataframe (cleaned)
+    """Loads AR/AP CSVs, parses dates/amounts and returns:
+    - AR_Due: not-paid AR invoices due within next 15 days (sorted earliest first)
+    - AP_Due: not-paid AP invoices due within next 15 days (sorted earliest first)
+    - AR_df: full AR dataframe (cleaned)
+    - AP_df: full AP dataframe (cleaned).
     """
     today = datetime.now()
 
@@ -121,8 +121,8 @@ def get_top_ap_overdue(ap_df, top_n=3):
 
 
 def get_AR_risk_data(ar_df):
-    """
-    Categorizes AR invoices by payment delay risk.
+    """Categorizes AR invoices by payment delay risk.
+
     Returns:
       - risk_distribution: DataFrame with Risk / Count
       - high_risk_invoices: DataFrame of high risk invoices (Not paid & overdue)
@@ -175,8 +175,7 @@ def get_AR_risk_data(ar_df):
 
 
 def get_AP_risk_data(ap_df):
-    """
-    Categorizes AP invoices by payment delay risk.
+    """Categorizes AP invoices by payment delay risk.
     Returns same structure as get_AR_risk_data.
     """
     today = datetime.now()
@@ -242,9 +241,8 @@ def get_invoice_summary(ar_df, ap_df):
 
 
 def view_risk_invoices(high_risk_invoices):
-    """
-    Returns a formatted dataframe of high-risk invoices for display in Streamlit.
-    Shows Invoice No., (Customer/Supplier Name), Service Description, Amount (AED), Due Date, Overdue Days
+    """Returns a formatted dataframe of high-risk invoices for display in Streamlit.
+    Shows Invoice No., (Customer/Supplier Name), Service Description, Amount (AED), Due Date, Overdue Days.
     """
     if high_risk_invoices is None or high_risk_invoices.empty:
         return pd.DataFrame()

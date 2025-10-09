@@ -1,5 +1,4 @@
-"""
-System prompts for CFO Dashboard AI Assistant.
+"""System prompts for CFO Dashboard AI Assistant.
 
 This module contains all system prompts and templates used by the AI Assistant.
 """
@@ -16,8 +15,7 @@ PROMPT_TYPES = {
 
 
 def get_system_prompt(chunk_data: str, question: str) -> str:
-    """
-    Generate dynamic system prompt for financial analysis.
+    """Generate dynamic system prompt for financial analysis.
 
     Args:
         chunk_data (str): Financial data chunks
@@ -55,8 +53,7 @@ RULES:
 
 
 def get_retry_prompt(question: str) -> str:
-    """
-    Generate retry prompt for failed responses.
+    """Generate retry prompt for failed responses.
 
     Args:
         question (str): User question
@@ -65,7 +62,7 @@ def get_retry_prompt(question: str) -> str:
         str: Retry prompt
     """
     return f"""Answer directly: {question}
-            
+
 MAXIMUM 150 WORDS. Format as:
 Key Findings:
 👉 Item 1 with exact values
@@ -78,8 +75,7 @@ CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and prop
 
 
 def get_greeting_prompt() -> str:
-    """
-    Get the greeting prompt for Krayra AI Assistant.
+    """Get the greeting prompt for Krayra AI Assistant.
 
     Returns:
         str: Greeting prompt

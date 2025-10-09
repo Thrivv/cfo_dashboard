@@ -1,10 +1,12 @@
-import runpod
-import pandas as pd
-import numpy as np
 import os
-from typing import Dict, Optional
-import streamlit as st
 import re
+from typing import Dict, Optional
+
+import numpy as np
+import pandas as pd
+import runpod
+import streamlit as st
+
 from utils import get_data_loader
 from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
@@ -13,8 +15,7 @@ endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
 
 def run_forecast_job(prompt, sampling_params=None):
-    """
-    Submit a job to the Forecasting RunPod serverless endpoint.
+    """Submit a job to the Forecasting RunPod serverless endpoint.
 
     Args:
         prompt (str): Forecasting query or request
@@ -182,8 +183,7 @@ class ForecastPreviewService:
 
 
 def parse_forecast_data(forecast_text: str) -> Optional[pd.DataFrame]:
-    """
-    Parse forecast data from text and return DataFrame for charting.
+    """Parse forecast data from text and return DataFrame for charting.
 
     Args:
         forecast_text (str): Raw forecast text containing date-value pairs
@@ -230,8 +230,7 @@ def parse_forecast_data(forecast_text: str) -> Optional[pd.DataFrame]:
 def create_forecast_chart(
     forecast_data: str, department: str, chart_height: int = 200
 ) -> bool:
-    """
-    Create a line chart for forecast data using Streamlit.
+    """Create a line chart for forecast data using Streamlit.
 
     Args:
         forecast_data (str): Raw forecast text containing date-value pairs
@@ -271,8 +270,7 @@ def create_forecast_chart_with_plotly(
     start_date: Optional[pd.Timestamp] = None,
     end_date: Optional[pd.Timestamp] = None,
 ):
-    """
-    Create a line chart for forecast data using Plotly (for Budgeting_Forecasting page).
+    """Create a line chart for forecast data using Plotly (for Budgeting_Forecasting page).
 
     Args:
         forecast_data (str): Raw forecast text containing date-value pairs
@@ -345,8 +343,7 @@ def create_forecast_chart_with_plotly(
 
 
 def _validate_llm_output(insights: str) -> bool:
-    """
-    Validate the LLM output to ensure it contains the required sections.
+    """Validate the LLM output to ensure it contains the required sections.
 
     Args:
         insights (str): The LLM-generated insights text.
@@ -454,7 +451,7 @@ def _format_llm_output(insights: str, department: str) -> str:
     insights = re.sub(r"<[^>]*>", "", insights)
 
     formatted_insights = (
-        f'<div style="font-family: sans-serif; font-size: 1rem; line-height: 1.5;">'
+        '<div style="font-family: sans-serif; font-size: 1rem; line-height: 1.5;">'
     )
     formatted_insights += f'<h4 style="color: #e6e9ef;">Forecast Insights for {department} Department:</h4>'
 
@@ -492,8 +489,7 @@ def generate_llm_forecast_insights(
     end_date: Optional[pd.Timestamp] = None,
     max_retries: int = 3,
 ) -> str:
-    """
-    Generate LLM-powered insights about the forecast data with validation and retries.
+    """Generate LLM-powered insights about the forecast data with validation and retries.
 
     Args:
         forecast_data (str): Raw forecast text containing date-value pairs.

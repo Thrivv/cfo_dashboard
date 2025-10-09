@@ -1,11 +1,9 @@
 import streamlit as st
-import pandas as pd
-from utils import get_data_loader
+
 from services.chat_services import process_financial_question
-from services.forecast_services import run_forecast_job
-from utils import save_chat_message
-from services.forecast_services import create_forecast_chart
+from services.forecast_services import create_forecast_chart, run_forecast_job
 from services.query_doc import query_documents
+from utils import get_data_loader, save_chat_message
 
 
 def suggest_questions():
@@ -192,7 +190,7 @@ def render():
       .msg-user {background: linear-gradient(135deg, rgba(148,2,245,0.20), rgba(41,128,185,0.20)); border: 1px solid rgba(148,2,245,0.35); color: #f1f3f5; margin-left: auto;}
       .msg-ai {background: linear-gradient(180deg, rgba(18,18,30,0.95), rgba(12,12,22,0.98)); border: 1px solid rgba(255,255,255,0.08); color: #cfd6dd;}
       .composer textarea {height: 72px !important;}
-      
+
       /* Style Streamlit expander to look like our panel */
       [data-testid="stExpander"] > details {background: linear-gradient(180deg, rgba(13,13,23,0.92), rgba(6,6,12,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;}
       [data-testid="stExpander"] summary {color: #c9d1d9; font-weight: 600;}

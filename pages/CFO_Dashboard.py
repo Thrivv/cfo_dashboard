@@ -1,13 +1,13 @@
-import streamlit as st
-import pandas as pd
+from datetime import datetime
+
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 
-from datetime import datetime
-from utils import get_data_loader
 from components.alert_card import render_cfo_alerts_section
 from components.data_filter import apply_filters, get_filter_summary, validate_filters
 from services.forecast_services import ForecastPreviewService
+from utils import get_data_loader
 
 
 def _clear_cache():
@@ -47,23 +47,22 @@ def _apply_plot_theme(
 
 def render():
     """Render CFO Dashboard with integrated Home page content."""
-
     st.markdown(
         """
     <style>
-      .app-surface {background: radial-gradient(1200px 600px at 10% 0%, #0a0a12 0%, #05050a 45%, #04040a 100%);}    
+      .app-surface {background: radial-gradient(1200px 600px at 10% 0%, #0a0a12 0%, #05050a 45%, #04040a 100%);}
       .panel {background: linear-gradient(180deg, rgba(13,13,23,0.92), rgba(6,6,12,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 16px;}
       .section-title {color: #e6e9ef; font-size: 1.05rem; font-weight: 700; margin: 0 0 8px;}
       .kpi-grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;}
-      .kpi-grid.cols-3 {grid-template-columns: repeat(3, 1fr);} 
-      .kpi-grid.cols-4 {grid-template-columns: repeat(4, 1fr);} 
-      .kpi-grid.cols-5 {grid-template-columns: repeat(5, 1fr);} 
-      .kpi-grid.cols-6 {grid-template-columns: repeat(6, 1fr);} 
+      .kpi-grid.cols-3 {grid-template-columns: repeat(3, 1fr);}
+      .kpi-grid.cols-4 {grid-template-columns: repeat(4, 1fr);}
+      .kpi-grid.cols-5 {grid-template-columns: repeat(5, 1fr);}
+      .kpi-grid.cols-6 {grid-template-columns: repeat(6, 1fr);}
       .kpi {background: linear-gradient(180deg, rgba(18,18,30,0.95), rgba(12,12,22,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 14px;}
       .kpi .label {color: #9aa3ab; font-size: .85rem;}
       .kpi .value {color: #e9ecef; font-size: 1.25rem; font-weight: 700; margin-top: 2px;}
       .footer { background: #06060d; padding: 1rem; border-radius: 10px; text-align: center; margin-top: 1.5rem; color: #889096; border: 1px solid rgba(255,255,255,0.06); }
-      
+
     </style>
     <script>
       const root = window.parent?.document?.querySelector('section.main');
@@ -249,7 +248,7 @@ def render():
 
                 # Get alert metrics from filtered data
                 cash_balance = latest_raw.get("Cash Balance", 0)
-                debt_equity_ratio = latest_raw.get("Debt-to-Equity Ratio", 0)
+                latest_raw.get("Debt-to-Equity Ratio", 0)
                 net_income = latest_raw.get("Net Income", 0)
                 current_ratio = latest_raw.get("Current Ratio", 0)
                 dso = latest_raw.get("Days Sales Outstanding (DSO)", 0)
@@ -378,7 +377,7 @@ def render():
                         next_cash = cash_flow_forecast["next_month_forecast"]
                         runway = cash_flow_forecast["runway_months"]
                         best_runway = cash_flow_forecast.get("best_case_runway", runway)
-                        worst_runway = cash_flow_forecast.get(
+                        cash_flow_forecast.get(
                             "worst_case_runway", runway
                         )
                         burn_trend = cash_flow_forecast.get("burn_trend", 0)

@@ -2,8 +2,7 @@ import streamlit as st
 
 
 def render_sidebar():
-    """Render sidebar navigation and return selected page"""
-
+    """Render sidebar navigation and return selected page."""
     st.markdown(
         """
     <style>

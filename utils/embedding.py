@@ -1,5 +1,6 @@
-from sentence_transformers import SentenceTransformer
 import logging
+
+from sentence_transformers import SentenceTransformer
 
 logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
 

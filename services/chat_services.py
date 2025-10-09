@@ -1,6 +1,7 @@
 import runpod
+
+from prompts import get_retry_prompt, get_system_prompt
 from utils import get_chunk_service
-from prompts import get_system_prompt, get_retry_prompt
 from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
 runpod.api_key = RUNPOD_API_KEY
@@ -8,8 +9,7 @@ endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
 
 def format_llm_response(response_text):
-    """
-    Centralized function to format LLM responses for consistent display across all pages.
+    """Centralized function to format LLM responses for consistent display across all pages.
     Converts newlines to HTML breaks for proper rendering in Streamlit.
 
     Args:
@@ -26,8 +26,7 @@ def format_llm_response(response_text):
 
 
 def run_chatbot_job(prompt):
-    """
-    Submit a job to the RAG application for financial analysis.
+    """Submit a job to the RAG application for financial analysis.
 
     Args:
         prompt (str): User query or financial question
@@ -49,8 +48,7 @@ def run_chatbot_job(prompt):
 
 
 def process_financial_question(question):
-    """
-    Process financial questions with data chunk integration.
+    """Process financial questions with data chunk integration.
 
     Args:
         question (str): Financial question from user

@@ -2,7 +2,7 @@ import streamlit as st
 
 
 def _generate_alert_question(alert):
-    """Generate a specific question for the AI assistant based on the alert type"""
+    """Generate a specific question for the AI assistant based on the alert type."""
     alert_type = alert.get("title", "").lower()
     alert_message = alert.get("message", "")
 
@@ -28,8 +28,7 @@ def _generate_alert_question(alert):
 
 
 def render_cfo_alerts_section(latest_raw, raw_df):
-    """
-    Render CFO-specific alerts with new color scheme
+    """Render CFO-specific alerts with new color scheme.
 
     Args:
         latest_raw: Latest financial data row
@@ -144,7 +143,7 @@ def render_cfo_alerts_section(latest_raw, raw_df):
         flex-direction: column;
         gap: 10px;
     }
-    
+
     .alert-item {
         display: flex;
         align-items: center;
@@ -156,40 +155,40 @@ def render_cfo_alerts_section(latest_raw, raw_df):
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         transition: all 0.3s ease;
     }
-    
+
     .alert-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    
+
     .alert-critical {
         background: linear-gradient(135deg, #2d1b1b, #1a0f0f);
         color: white;
         border-left: 4px solid #e74c3c;
     }
-    
+
     .alert-warning {
         background: linear-gradient(135deg, #2d2a1b, #1a180f);
         color: white;
         border-left: 4px solid #f39c12;
     }
-    
+
     .alert-info {
         background: linear-gradient(135deg, #1b1d2d, #0f111a);
         color: white;
         border-left: 4px solid #3498db;
     }
-    
+
     .alert-icon {
         margin-right: 12px;
         font-size: 1.2rem;
     }
-    
+
     .alert-text {
         flex: 1;
         line-height: 1.4;
     }
-    
+
     .ask-KraYa-btn {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -203,13 +202,13 @@ def render_cfo_alerts_section(latest_raw, raw_df):
         margin-left: 10px;
         white-space: nowrap;
     }
-    
+
     .ask-KraYa-btn:hover {
         background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
-    
+
     .alert-content {
         display: flex;
         align-items: center;

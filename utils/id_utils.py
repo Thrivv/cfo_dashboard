@@ -1,4 +1,6 @@
-import hashlib, time, random
+import hashlib
+import random
+import time
 
 
 def make_id(*parts) -> str:

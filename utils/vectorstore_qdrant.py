@@ -1,11 +1,11 @@
+
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
-import uuid
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 try:
-    from .config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION
+    from .config import QDRANT_API_KEY, QDRANT_COLLECTION, QDRANT_URL
 except ImportError:
-    from config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION
+    from config import QDRANT_API_KEY, QDRANT_COLLECTION, QDRANT_URL
 
 client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 

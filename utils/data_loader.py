@@ -1,7 +1,8 @@
-import pandas as pd
 import os
+from typing import Any, Dict, Optional
+
+import pandas as pd
 import streamlit as st
-from typing import Optional, Dict, Any
 
 
 class DataLoaderService:
@@ -14,8 +15,7 @@ class DataLoaderService:
         self._is_loaded = False
 
     def load_data(self) -> bool:
-        """
-        Load data from CSV file and perform initial processing.
+        """Load data from CSV file and perform initial processing.
 
         Returns:
             bool: True if data loaded successfully, False otherwise
@@ -96,8 +96,7 @@ class DataLoaderService:
                 )
 
     def get_raw_data(self) -> Optional[pd.DataFrame]:
-        """
-        Get the raw, unprocessed data with caching.
+        """Get the raw, unprocessed data with caching.
 
         Returns:
             pd.DataFrame or None: Raw data if loaded, None otherwise
@@ -111,8 +110,7 @@ class DataLoaderService:
         return st.session_state[cache_key]
 
     def get_processed_data(self) -> Optional[pd.DataFrame]:
-        """
-        Get the processed data with proper data types and formatting.
+        """Get the processed data with proper data types and formatting.
 
         Returns:
             pd.DataFrame or None: Processed data if loaded, None otherwise
@@ -126,8 +124,7 @@ class DataLoaderService:
         return st.session_state[cache_key]
 
     def get_latest_data(self) -> Optional[pd.Series]:
-        """
-        Get the latest data record (most recent period).
+        """Get the latest data record (most recent period).
 
         Returns:
             pd.Series or None: Latest data record if available, None otherwise
@@ -146,8 +143,7 @@ class DataLoaderService:
         self._is_loaded = False
 
     def get_data_summary(self) -> Dict[str, Any]:
-        """
-        Get a summary of the loaded data.
+        """Get a summary of the loaded data.
 
         Returns:
             Dict[str, Any]: Data summary information
@@ -175,8 +171,7 @@ class DataLoaderService:
         }
 
     def is_data_loaded(self) -> bool:
-        """
-        Check if data is currently loaded.
+        """Check if data is currently loaded.
 
         Returns:
             bool: True if data is loaded, False otherwise
@@ -184,8 +179,7 @@ class DataLoaderService:
         return self._is_loaded
 
     def reload_data(self) -> bool:
-        """
-        Reload data from the source file.
+        """Reload data from the source file.
 
         Returns:
             bool: True if reloaded successfully, False otherwise
@@ -200,8 +194,7 @@ _data_loader = DataLoaderService()
 
 
 def get_data_loader() -> DataLoaderService:
-    """
-    Get the global data loader instance.
+    """Get the global data loader instance.
 
     Returns:
         DataLoaderService: Global data loader instance
@@ -210,8 +203,7 @@ def get_data_loader() -> DataLoaderService:
 
 
 def load_cfo_data() -> Optional[pd.DataFrame]:
-    """
-    Load CFO data from centralized data loader, converted to simplified schema used by UI.
+    """Load CFO data from centralized data loader, converted to simplified schema used by UI.
 
     Returns:
         pd.DataFrame or None: CFO data with simplified schema if available, None otherwise
@@ -242,8 +234,7 @@ def load_cfo_data() -> Optional[pd.DataFrame]:
 
 
 def load_raw_dataframe() -> Optional[pd.DataFrame]:
-    """
-    Load raw dataframe for backward compatibility.
+    """Load raw dataframe for backward compatibility.
 
     Returns:
         pd.DataFrame or None: Raw dataframe if available, None otherwise
@@ -252,8 +243,7 @@ def load_raw_dataframe() -> Optional[pd.DataFrame]:
 
 
 def get_latest_cfo_data() -> Optional[pd.Series]:
-    """
-    Get latest CFO data record.
+    """Get latest CFO data record.
 
     Returns:
         pd.Series or None: Latest data record if available, None otherwise
@@ -262,8 +252,7 @@ def get_latest_cfo_data() -> Optional[pd.Series]:
 
 
 def get_data_summary() -> Dict[str, Any]:
-    """
-    Get data summary information.
+    """Get data summary information.
 
     Returns:
         Dict[str, Any]: Data summary
@@ -272,8 +261,7 @@ def get_data_summary() -> Dict[str, Any]:
 
 
 def initialize_data() -> bool:
-    """
-    Initialize and load data for the application.
+    """Initialize and load data for the application.
 
     Returns:
         bool: True if initialization successful, False otherwise

@@ -1,10 +1,9 @@
 import streamlit as st
 
-from components.sidebar import render_sidebar
 from components.header import render_header
 from components.sessions import init_session_state
-from pages import Budgeting_Forecasting, Insights, CFO_Dashboard, AI_Assistant
-
+from components.sidebar import render_sidebar
+from pages import AI_Assistant, Budgeting_Forecasting, CFO_Dashboard, Insights
 
 st.set_page_config(
     page_title="ThrivvAI CFO Dashboard",
@@ -20,7 +19,7 @@ st.set_page_config(
 
 
 def main():
-    """Main application entry point"""
+    """Main application entry point."""
     init_session_state()
 
     current_page = render_sidebar()

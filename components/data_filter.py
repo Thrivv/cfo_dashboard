@@ -1,10 +1,9 @@
+
 import pandas as pd
-import warnings
-from datetime import datetime
 
 
 def parse_quarterly_date(date_str):
-    """Parse quarterly date strings like '2021Q1' to proper datetime"""
+    """Parse quarterly date strings like '2021Q1' to proper datetime."""
     try:
         if "Q" in str(date_str):
             year, quarter = str(date_str).split("Q")
@@ -19,7 +18,7 @@ def parse_quarterly_date(date_str):
 
 
 def parse_date_column(date_series):
-    """Parse date column with multiple format support - optimized version"""
+    """Parse date column with multiple format support - optimized version."""
     # Try to parse the entire series at once for better performance
     try:
         # Try MM/DD/YYYY format first
@@ -58,7 +57,7 @@ def parse_date_column(date_series):
 
 
 def apply_date_range_filter(df, date_range):
-    """Apply date range filtering"""
+    """Apply date range filtering."""
     if "Date" not in df.columns or df.empty:
         return df
 
@@ -90,7 +89,7 @@ def apply_date_range_filter(df, date_range):
 
 
 def apply_period_aggregation(df, period_type):
-    """Apply period-based aggregation"""
+    """Apply period-based aggregation."""
     if "Date" not in df.columns or df.empty:
         return df
 
@@ -133,8 +132,7 @@ def apply_period_aggregation(df, period_type):
 
 
 def apply_filters(df, filters):
-    """
-    Apply comprehensive filtering to the dataframe based on user selections
+    """Apply comprehensive filtering to the dataframe based on user selections.
 
     Args:
         df: Raw dataframe
@@ -193,8 +191,7 @@ def apply_filters(df, filters):
 
 
 def get_filter_summary(filtered_df, filters):
-    """
-    Get a summary of applied filters and data statistics
+    """Get a summary of applied filters and data statistics.
 
     Args:
         filtered_df: Filtered dataframe
@@ -236,8 +233,7 @@ def get_filter_summary(filtered_df, filters):
 
 
 def validate_filters(filters):
-    """
-    Validate filter settings and provide defaults if needed
+    """Validate filter settings and provide defaults if needed.
 
     Args:
         filters: Filter dictionary

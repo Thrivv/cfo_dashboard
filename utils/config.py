@@ -1,6 +1,7 @@
-import streamlit as st
 import os
+
 from dotenv import load_dotenv
+import streamlit as st
 
 # Try to load from .env first (for backward compatibility)
 load_dotenv(dotenv_path="/home/ubuntu/cfo_dashboard/.env")

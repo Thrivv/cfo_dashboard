@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Tuple
+
+from typing import Any, Dict, List
+
 import pandas as pd
 
 # kpi_service import removed - functions were unused

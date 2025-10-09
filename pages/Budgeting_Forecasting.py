@@ -1,11 +1,15 @@
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime, timedelta
-from services.forecast_services import run_forecast_job
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+from services.forecast_services import (
+    create_forecast_chart_with_plotly,
+    run_forecast_job,
+)
 from utils import get_data_loader
-from services.forecast_services import create_forecast_chart_with_plotly
 
 
 def _apply_plot_theme(
@@ -33,11 +37,10 @@ def _apply_plot_theme(
 
 def render():
     """Redesigned Forecasting page with 2-column layout for better visualization."""
-
     st.markdown(
         """
     <style>
-      .app-surface {background: radial-gradient(1200px 600px at 10% 0%, #0a0a12 0%, #05050a 45%, #04040a 100%);}    
+      .app-surface {background: radial-gradient(1200px 600px at 10% 0%, #0a0a12 0%, #05050a 45%, #04040a 100%);}
       .panel {background: linear-gradient(180deg, rgba(13,13,23,0.92), rgba(6,6,12,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;}
       .section-title {color: #e6e9ef; font-size: 1.05rem; font-weight: 700; margin: 0 0 8px;}
       .kpi-grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;}
