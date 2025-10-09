@@ -4,7 +4,7 @@ from utils import get_data_loader
 from services.chat_services import process_financial_question
 from services.forecast_services import run_forecast_job
 from utils import save_chat_message
-from services.graph_services import display_forecast_chart
+from services.forecast_services import create_forecast_chart
 from services.query_doc import query_documents
 
 
@@ -33,10 +33,7 @@ def suggest_questions():
         # "Predict spending trends for Marketing",
         
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
-        "What are the overdue invoices?",
-        "Show me payment status summary",
-        "What are the payment service requirements?",
-        "What are the license categories?",
+        "What are the important considerations from retail system services and Card schemes regulations",
         "What are the capital requirements?",
         
     ]
@@ -50,7 +47,9 @@ def is_forecast_question(question):
 
 def is_rag_question(question):
     """Check if the question is asking for document/invoice/regulation analysis."""
-    rag_keywords = ['invoice', 'payment', 'overdue', 'regulation', 'requirement', 'license', 'warning', 'opportunity', 'account receivable', 'account payable', 'receivables', 'payables', "Purchase orders", 'terms and conditions', 'discount', 'penalty', 'late fee', 'retail payment', 'card scheme']
+
+    rag_keywords = ['invoice', 'payment', 'overdue', 'regulation', 'license', 'warning','opportunity', 'account receivable', 'account payable', 'receivables', 'payables', 'purchase orders', 'po', 'terms and conditions', 't&c', 'discount', 'penalty', 'late fee', 'retail payment', 'card scheme', 'compliance', 'due date', 'settlement', 'financial obligation', 'supplier', 'vendor', 'customer', 'payment schedule', 'extended terms', 'regulatory requirement', 'reporting requirement', 'internal control', 'rps', 'penal interest', 'interest charge', 'late payment', 'guarantee', 'reminder notice',' capital requirements']
+  
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in rag_keywords)
 
@@ -199,8 +198,8 @@ def render():
                     
                     # Add forecast insights to the main message if available
                     if "Forecast Generated" in response_text and forecast_data:
-                        from services.graph_services import generate_forecast_insights
-                        insights = generate_forecast_insights(
+                        from services.forecast_services import generate_chatbot_forecast_insights
+                        insights = generate_chatbot_forecast_insights(
                             forecast_data, 
                             forecast_department
                         )
@@ -212,10 +211,9 @@ def render():
                     # Show forecast chart if available
                     if "Forecast Generated" in response_text and forecast_data:
                         # Display forecast chart
-                        display_forecast_chart(
+                        create_forecast_chart(
                             forecast_data, 
                             forecast_department,
-                            chart_type="streamlit",
                             chart_height=200
                         )
                         

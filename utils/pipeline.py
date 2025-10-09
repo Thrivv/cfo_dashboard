@@ -17,7 +17,7 @@ from utils.redis_client import store_metadata, get_metadata
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
     """Load the selected template from insights.json"""
-    with open("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/prompts/insights.json", "r") as f:
+    with open("/home/ubuntu/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
 
@@ -60,14 +60,18 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
-    docs = [get_metadata(r.payload["chunk_id"])["content"] for r in results]
+    docs = []
+    for r in results:
+        metadata = get_metadata(r.payload["chunk_id"])
+        if metadata and "content" in metadata:
+            docs.append(metadata["content"])
     reranked = rerank(query, docs)
 
     # Step 2: Load and preprocess data
-    ar_df = pd.read_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AR_Invoice.csv")
-    ap_df = pd.read_csv("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AP_Invoice.csv")
-    po_text = parse_pdf("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/PO_T&C.pdf")
-    reg_text = parse_pdf("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf")
+    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
+    po_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/PO_T&C.pdf")
+    reg_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf")
 
     # Normalize dates
     for df in [ar_df, ap_df]:

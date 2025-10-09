@@ -48,8 +48,7 @@ def run_chatbot_job(prompt):
             "application": "CFOChatbot",
             "sampling_params": {
                 "temperature": 0.1,
-                "max_tokens": 25,
-                "repetition_penalty": 1.2
+                "max_tokens": 512
             }
         }
     }

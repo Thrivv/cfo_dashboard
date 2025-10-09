@@ -9,15 +9,11 @@ def generate_due_tables():
       - AR_df: full AR dataframe (cleaned)
       - AP_df: full AP dataframe (cleaned)
     """
-    # NOTE: adjust paths to your environment if needed
-    ar_path = "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AR_Invoice.csv"
-    ap_path = "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AP_Invoice.csv"
-
     today = datetime.now()
 
     # Load AR and AP
-    ar_df = pd.read_csv(ar_path)
-    ap_df = pd.read_csv(ap_path)
+    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
 
     # --- Normalize column names (strip spaces) ---
     ar_df.columns = [c.strip() for c in ar_df.columns]
