@@ -1,3 +1,5 @@
+"""Sidebar component for navigation in the CFO dashboard."""
+
 import streamlit as st
 
 

@@ -1,3 +1,5 @@
+"""Data filtering components for the CFO dashboard."""
+
 import pandas as pd
 
 
@@ -12,7 +14,7 @@ def parse_quarterly_date(date_str):
             return pd.to_datetime(f"{year}-{month}-01", format="%Y-%m-%d")
         else:
             return pd.to_datetime(date_str)
-    except:
+    except (ValueError, TypeError):
         return pd.to_datetime(date_str)
 
 

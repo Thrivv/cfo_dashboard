@@ -1,3 +1,5 @@
+"""Session state management for the CFO dashboard."""
+
 from datetime import datetime, timedelta
 
 import streamlit as st

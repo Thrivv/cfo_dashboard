@@ -11,14 +11,23 @@ def _generate_alert_question(alert):
     # Generate contextual questions based on alert type
     if "cash" in alert_type or "liquidity" in alert_type:
         return (
-            f"What should I do about our cash position and liquidity? {alert_message}"
+            f"What should I do about our cash position and liquidity? "
+            f"{alert_message}"
         )
     elif "leverage" in alert_type or "debt" in alert_type:
-        return f"How can I improve our debt-to-equity ratio? {alert_message}"
+        return (
+            f"How can I improve our debt-to-equity ratio? {alert_message}"
+        )
     elif "performance" in alert_type or "revenue" in alert_type:
-        return f"What strategies can help improve our financial performance? {alert_message}"
+        return (
+            f"What strategies can help improve our financial performance? "
+            f"{alert_message}"
+        )
     elif "collections" in alert_type or "dso" in alert_type:
-        return f"How can I optimize our accounts receivable and collections process? {alert_message}"
+        return (
+            f"How can I optimize our accounts receivable and collections "
+            f"process? {alert_message}"
+        )
     elif "margins" in alert_type or "profitability" in alert_type:
         return f"What can I do to improve our profit margins? {alert_message}"
     elif "inventory" in alert_type:

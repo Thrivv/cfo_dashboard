@@ -1,3 +1,5 @@
+"""Chat services for AI assistant functionality."""
+
 import runpod
 
 from prompts import get_retry_prompt, get_system_prompt

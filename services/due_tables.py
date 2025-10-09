@@ -1,3 +1,5 @@
+"""Services for generating due tables and risk data."""
+
 from datetime import datetime, timedelta
 
 import pandas as pd

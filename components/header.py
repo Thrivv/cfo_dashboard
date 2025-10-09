@@ -1,3 +1,5 @@
+"""Header component for the CFO dashboard."""
+
 import streamlit as st
 
 
