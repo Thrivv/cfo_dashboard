@@ -12,17 +12,17 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Get Help': 'https://thrivvai.com/support',
-        'Report a bug': 'https://thrivvai.com/bug-report',
-        'About': 'ThrivvAI CFO Dashboard - Advanced Financial Analytics Platform'
-    }
+        "Get Help": "https://thrivvai.com/support",
+        "Report a bug": "https://thrivvai.com/bug-report",
+        "About": "ThrivvAI CFO Dashboard - Advanced Financial Analytics Platform",
+    },
 )
 
 
 def main():
     """Main application entry point"""
     init_session_state()
-    
+
     current_page = render_sidebar()
     render_header()
 
@@ -38,5 +38,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

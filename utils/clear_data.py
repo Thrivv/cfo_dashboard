@@ -17,6 +17,7 @@ from utils.config import (
     REDIS_PASSWORD,
 )
 
+
 def clear_qdrant():
     """Deletes the Qdrant collection."""
     try:
@@ -24,7 +25,9 @@ def clear_qdrant():
         client.delete_collection(collection_name=QDRANT_COLLECTION)
         print(f"✅ Qdrant collection '{QDRANT_COLLECTION}' deleted.")
     except Exception as e:
-        print(f"⚠️ Qdrant collection '{QDRANT_COLLECTION}' could not be deleted. It might not exist. Error: {e}")
+        print(
+            f"⚠️ Qdrant collection '{QDRANT_COLLECTION}' could not be deleted. It might not exist. Error: {e}"
+        )
 
 
 def clear_redis():

@@ -6,9 +6,18 @@ from datetime import datetime, timedelta
 import plotly.express as px
 
 # Add RAG directory to path for due tables and insights
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG')))
-from services.due_tables import generate_due_tables, get_invoice_summary, view_risk_invoices, get_AP_risk_data, get_AR_risk_data
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "RAG"))
+)
+from services.due_tables import (
+    generate_due_tables,
+    get_invoice_summary,
+    view_risk_invoices,
+    get_AP_risk_data,
+    get_AR_risk_data,
+)
 from services.generate_insights import generate_insights
+
 
 def render():
     st.subheader("📊 Accounts Payable / Receivable Insights")
@@ -19,12 +28,19 @@ def render():
 
     st.subheader("Invoice Summary")
     summary_data = get_invoice_summary(ar_df, ap_df)
-            
-    fig = px.bar(summary_data["summary_df"], x='Type', y='Total Amount (AED)', title='Total Invoice Amounts')
+
+    fig = px.bar(
+        summary_data["summary_df"],
+        x="Type",
+        y="Total Amount (AED)",
+        title="Total Invoice Amounts",
+    )
     st.plotly_chart(fig, use_container_width=True, key="invoice_summary")
-            
+
     st.metric(label="Account Payable", value=f"{summary_data['ap_total']/1e6:.1f}M AED")
-    st.metric(label="Account Receivable", value=f"{summary_data['ar_total']/1e6:.1f}M AED")
+    st.metric(
+        label="Account Receivable", value=f"{summary_data['ar_total']/1e6:.1f}M AED"
+    )
 
     try:
         # Top section with risk score and invoice summary
@@ -32,30 +48,43 @@ def render():
         with col1:
             st.subheader("AR Payment Delay Risk Score")
             risk_data_ar = get_AR_risk_data(ar_df)
-            
-            fig_1 = px.pie(risk_data_ar["risk_distribution"], names='Risk', values='Count', title='Receivables Delay Risk Distribution')
+
+            fig_1 = px.pie(
+                risk_data_ar["risk_distribution"],
+                names="Risk",
+                values="Count",
+                title="Receivables Delay Risk Distribution",
+            )
             st.plotly_chart(fig_1, use_container_width=True, key="ar_risk_distribution")
 
-            st.warning(f"High risk of Account Receivable payment delays detected in {risk_data_ar['high_risk_count']} invoices totalling {risk_data_ar['high_risk_total']:.2f} AED")
-            
+            st.warning(
+                f"High risk of Account Receivable payment delays detected in {risk_data_ar['high_risk_count']} invoices totalling {risk_data_ar['high_risk_total']:.2f} AED"
+            )
+
             if st.button("View Risk AR Invoices"):
                 st.dataframe(view_risk_invoices(risk_data_ar["high_risk_invoices"]))
 
         with col2:
             st.subheader("AP Payment Delay Risk Score")
             risk_data_ap = get_AP_risk_data(ap_df)
-            
-            fig_2 = px.pie(risk_data_ap["risk_distribution"], names='Risk', values='Count', title='Payables Delay Risk Distribution')
+
+            fig_2 = px.pie(
+                risk_data_ap["risk_distribution"],
+                names="Risk",
+                values="Count",
+                title="Payables Delay Risk Distribution",
+            )
             st.plotly_chart(fig_2, use_container_width=True, key="ap_risk_distribution")
 
-            st.warning(f"High risk of Account Payable payment delays detected in {risk_data_ap['high_risk_count']} invoices totalling {risk_data_ap['high_risk_total']:.2f} AED")
-            
+            st.warning(
+                f"High risk of Account Payable payment delays detected in {risk_data_ap['high_risk_count']} invoices totalling {risk_data_ap['high_risk_total']:.2f} AED"
+            )
+
             if st.button("View Risk AP Invoices"):
                 st.dataframe(view_risk_invoices(risk_data_ap["high_risk_invoices"]))
-    
+
     except Exception as e:
         st.error(f"An error occurred while generating AP/AR tables: {e}")
-
 
     # ===============================
     # Append Due Tables
@@ -103,7 +132,11 @@ def render():
                 if ap_opps:
                     full_opp_text += ap_opps
                 if full_opp_text:
-                    lines = [line.strip() for line in full_opp_text.split('\n') if line.strip()]
+                    lines = [
+                        line.strip()
+                        for line in full_opp_text.split("\n")
+                        if line.strip()
+                    ]
                     # Show all opportunities, not just the first 2
                     if lines:
                         for line in lines:
@@ -123,7 +156,11 @@ def render():
                 if ap_warnings:
                     full_warn_text += ap_warnings
                 if full_warn_text:
-                    lines = [line.strip() for line in full_warn_text.split('\n') if line.strip()]
+                    lines = [
+                        line.strip()
+                        for line in full_warn_text.split("\n")
+                        if line.strip()
+                    ]
                     # Show all warnings, not just the first 2
                     if lines:
                         for line in lines:
