@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/.env")
+load_dotenv(dotenv_path="/home/ubuntu/cfo_dashboard/.env")
 
 # Qdrant
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -14,7 +14,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_USERNAME = os.getenv("REDIS_USERNAME")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
-# FinBERT Model
+# Embedding Model
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Cohere

@@ -18,7 +18,7 @@ from utils.redis_client import store_metadata, get_metadata
 def load_template(template_name: str) -> str:
     """Load the selected template from insights.json"""
     with open(
-        "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/prompts/insights.json",
+        "/home/ubuntu/cfo_dashboard/prompts/insights.json",
         "r",
     ) as f:
         templates = json.load(f)
@@ -64,17 +64,17 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
 
     # Step 2: Load and preprocess data
     ar_df = pd.read_csv(
-        "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AR_Invoice.csv"
-    )
+        "/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv"
+        )
     ap_df = pd.read_csv(
-        "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/AP_Invoice.csv"
-    )
+        "/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv"
+        )
     po_text = parse_pdf(
-        "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/PO_T&C.pdf"
-    )
+        "/home/ubuntu/cfo_dashboard/data/PO_T&C.pdf"
+        )
     reg_text = parse_pdf(
-        "/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf"
-    )
+        "/home/ubuntu/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf"
+        )
 
     # Normalize dates
     for df in [ar_df, ap_df]:
