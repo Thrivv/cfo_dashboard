@@ -1,5 +1,3 @@
-
-
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
     """Chunks text using a sliding window approach."""
     words = text.split()

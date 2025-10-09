@@ -49,9 +49,7 @@ Include supplier, invoice number, overdue days, PO T&C clause/regulation, and wh
     ap_warnings = query_rag(ap_warning_query, template_name="ap_warning_summary")
 
     # --- Opportunities Generation ---
-    (
-        f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}"
-    )
+    (f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}")
     ar_opportunity_query = "Generate up to 2 AR opportunities, each max 3 lines, with regulation references."
     ar_opps = query_rag(ar_opportunity_query, template_name="ar_opportunity_summary")
 

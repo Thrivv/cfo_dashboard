@@ -1,3 +1,5 @@
+"""AI Assistant page with chat interface for financial queries."""
+
 import streamlit as st
 
 from services.chat_services import process_financial_question

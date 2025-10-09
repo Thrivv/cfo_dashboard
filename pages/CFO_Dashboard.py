@@ -1,3 +1,5 @@
+"""CFO Dashboard page with financial metrics and KPIs."""
+
 from datetime import datetime
 
 import plotly.express as px
@@ -377,9 +379,7 @@ def render():
                         next_cash = cash_flow_forecast["next_month_forecast"]
                         runway = cash_flow_forecast["runway_months"]
                         best_runway = cash_flow_forecast.get("best_case_runway", runway)
-                        cash_flow_forecast.get(
-                            "worst_case_runway", runway
-                        )
+                        cash_flow_forecast.get("worst_case_runway", runway)
                         burn_trend = cash_flow_forecast.get("burn_trend", 0)
 
                         st.markdown(

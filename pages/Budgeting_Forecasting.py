@@ -1,3 +1,5 @@
+"""Budgeting and Forecasting page with revenue forecasting capabilities."""
+
 from datetime import datetime, timedelta
 
 import pandas as pd

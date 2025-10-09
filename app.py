@@ -1,3 +1,5 @@
+"""Main Streamlit application for CFO Dashboard."""
+
 import streamlit as st
 
 from components.header import render_header
