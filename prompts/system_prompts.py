@@ -78,11 +78,11 @@ CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and prop
 
 def get_smart_prompt(chunk_data: str, question: str) -> str:
     """Generate financial-only prompt for CFO dashboard.
-    
+
     Args:
         chunk_data (str): Financial data chunks
         question (str): User question
-        
+
     Returns:
         str: Financial analysis prompt
     """
@@ -126,10 +126,10 @@ FOLLOW THESE RULES EXACTLY - NO EXCEPTIONS."""
 
 def get_general_question_prompt(question: str) -> str:
     """Generate prompt for non-financial questions.
-    
+
     Args:
         question (str): User question
-        
+
     Returns:
         str: General response prompt
     """
