@@ -76,6 +76,38 @@ CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and prop
 """
 
 
+def get_smart_prompt(chunk_data: str, question: str) -> str:
+    """Generate smart prompt that lets AI decide how to respond.
+    
+    Args:
+        chunk_data (str): Financial data chunks
+        question (str): User question
+        
+    Returns:
+        str: Smart prompt that adapts to question type
+    """
+    return f"""You are Krayra, a helpful AI assistant. 
+
+AVAILABLE DATA:
+{chunk_data}
+
+USER QUESTION:
+{question}
+
+INSTRUCTIONS:
+- If the question is about financial data, business metrics, or company performance, use this format:
+  Key Findings:
+  👉 [Finding 1 with exact values]
+  👉 [Finding 2 with exact values]
+  👉 [Finding 3 with exact values]
+  
+  Conclusion: [1-2 sentences with insights]
+
+- If the question is general knowledge, personal, or not related to the financial data, answer naturally and conversationally without any special formatting.
+
+- Be helpful, accurate, and professional in all responses."""
+
+
 def get_general_question_prompt(question: str) -> str:
     """Generate prompt for non-financial questions.
     
