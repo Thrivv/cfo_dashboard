@@ -9,6 +9,8 @@ PROMPT_TYPES = {
     "retry": "retry_prompt",
     "financial": "financial_analysis",
     "chat": "chat_response",
+    "general": "general_question_prompt",
+    "greeting": "greeting_prompt",
 }
 
 # LLM settings (removed - using chat_services.py configuration)
@@ -48,7 +50,7 @@ RULES:
 • Be direct and professional
 • No tools or functions
 • CRITICAL: Only use current data provided - do not reference outdated information
-• CRITICAL: If question is not about financial data (like personal questions, greetings, definitions), respond naturally without using financial data format
+• CRITICAL: If question is not about financial data (like personal questions, greetings, definitions), respond naturally without using the financial data format.
 """
 
 
@@ -70,7 +72,29 @@ Key Findings:
 
 Conclusion: 1-2 sentences
 
-CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions. Only use current data provided. If question is not about financial data, respond naturally without financial format.
+CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions. Only use current data provided. If question is not about financial data, respond naturally without using the financial data format.
+"""
+
+
+def get_general_question_prompt(question: str) -> str:
+    """Generate prompt for non-financial questions.
+    
+    Args:
+        question (str): User question
+        
+    Returns:
+        str: General response prompt
+    """
+    return f"""You are Krayra, a helpful AI assistant. Answer this question naturally and conversationally:
+
+{question}
+
+Guidelines:
+- Be helpful and informative
+- Keep responses concise but complete
+- Use a friendly, professional tone
+- If you don't know something, say so
+- No need for special formatting or bullet points
 """
 
 
