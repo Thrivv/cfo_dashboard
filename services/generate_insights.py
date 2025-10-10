@@ -1,24 +1,24 @@
 import json
-import sys
 import os
+import sys
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.pipeline import query_rag
 from services.due_tables import (
     generate_due_tables,
     get_correct_time_payers,
-    get_top_ar_overdue,
     get_top_ap_overdue,
+    get_top_ar_overdue,
 )
+from utils.pipeline import query_rag
 
 
 def generate_insights():
     # Get AR/AP tables and AR_df
     due_data = generate_due_tables()
-    ar_table = due_data["AR_Due"]
-    ap_table = due_data["AP_Due"]
+    due_data["AR_Due"]
+    due_data["AP_Due"]
     ar_df = due_data["AR_df"]
     ap_df = due_data["AP_df"]
 
@@ -49,15 +49,10 @@ Include supplier, invoice number, overdue days, PO T&C clause/regulation, and wh
     ap_warnings = query_rag(ap_warning_query, template_name="ap_warning_summary")
 
     # --- Opportunities Generation ---
-    ar_opp_context = (
-        f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}"
-    )
-    ar_opportunity_query = f"Generate up to 2 AR opportunities, each max 3 lines, with regulation references."
+    (f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}")
+    ar_opportunity_query = "Generate up to 2 AR opportunities, each max 3 lines, with regulation references."
     ar_opps = query_rag(ar_opportunity_query, template_name="ar_opportunity_summary")
 
-    ap_opp_context = (
-        f"AP invoices nearing due:\n{ap_table}\nPO T&C document data available."
-    )
     ap_opportunity_query = (
         "Generate up to 2 AP opportunities, each max 3 lines, with PO T&C references."
     )

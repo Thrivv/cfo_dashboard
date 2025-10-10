@@ -1,11 +1,12 @@
+"""Chart components for data visualization in the CFO dashboard."""
+
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
 import streamlit as st
 
 
 def render_kpi_chart(data, title, x_col, y_col, chart_type="line"):
-    """Render KPI chart with various types"""
+    """Render KPI chart with various types."""
     try:
         if chart_type == "line":
             fig = px.line(data, x=x_col, y=y_col, title=title)
@@ -24,7 +25,7 @@ def render_kpi_chart(data, title, x_col, y_col, chart_type="line"):
 
 
 def render_forecast_chart(historical_data, forecast_data, title):
-    """Render forecast chart with confidence intervals"""
+    """Render forecast chart with confidence intervals."""
     try:
         fig = go.Figure()
 
@@ -82,7 +83,7 @@ def render_forecast_chart(historical_data, forecast_data, title):
 
 
 def render_metric_cards(metrics):
-    """Render metric cards in columns"""
+    """Render metric cards in columns."""
     cols = st.columns(len(metrics))
 
     for i, (label, value, delta) in enumerate(metrics):

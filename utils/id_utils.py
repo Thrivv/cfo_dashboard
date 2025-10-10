@@ -1,4 +1,9 @@
-import hashlib, time, random
+"""ID generation utilities for the CFO dashboard."""
+
+import hashlib
+import random
+import time
+
 
 
 def make_id(*parts) -> str:

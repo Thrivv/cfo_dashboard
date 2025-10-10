@@ -1,3 +1,5 @@
+"""Reranking utilities for document retrieval."""
+
 import cohere
 
 try:

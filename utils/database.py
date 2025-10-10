@@ -1,12 +1,14 @@
-import sqlite3
-from typing import List, Dict
+"""Database utilities for the CFO dashboard."""
+
 import os
+import sqlite3
+from typing import Dict, List
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "chat_history.db")
 
 
 def init_database():
-    """Initialize database with chat history table only"""
+    """Initialize database with chat history table only."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
@@ -30,7 +32,7 @@ def init_database():
 
 
 def save_chat_message(message: str, response: str = None):
-    """Save chat message to database"""
+    """Save chat message to database."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
@@ -65,7 +67,7 @@ def save_chat_message(message: str, response: str = None):
 
 
 def get_chat_history(limit: int = 50) -> List[Dict]:
-    """Get chat history"""
+    """Get chat history."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
@@ -75,7 +77,7 @@ def get_chat_history(limit: int = 50) -> List[Dict]:
         cursor.execute(
             """
             SELECT message, response, created_at
-            FROM chat_history 
+            FROM chat_history
             ORDER BY created_at DESC
             LIMIT ?
         """,

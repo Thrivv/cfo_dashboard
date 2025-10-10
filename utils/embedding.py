@@ -1,5 +1,8 @@
-from sentence_transformers import SentenceTransformer
+"""Embedding utilities for vector operations."""
+
 import logging
+
+from sentence_transformers import SentenceTransformer
 
 logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
 

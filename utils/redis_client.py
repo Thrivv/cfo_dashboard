@@ -1,10 +1,13 @@
-import redis
+"""Redis client utilities for caching."""
+
 import json
 
+import redis
+
 try:
-    from .config import REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD
+    from .config import REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, REDIS_USERNAME
 except ImportError:
-    from config import REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD
+    from config import REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, REDIS_USERNAME
 
 _redis_client = redis.Redis(
     host=REDIS_HOST,

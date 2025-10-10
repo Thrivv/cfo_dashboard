@@ -1,33 +1,34 @@
+"""RAG pipeline utilities for document processing."""
+
+from datetime import datetime, timedelta
 import json
 import uuid
-from datetime import datetime, timedelta
+
 import pandas as pd
 from qdrant_client.models import PointStruct
 
-# Local utility imports
-from utils.parser import parse_pdf, parse_csv
 from utils.chunker import chunk_text
 from utils.embedding import embed_texts
-from utils.vectorstore_qdrant import init_collection, upsert_embeddings, search
-from utils.rerank import rerank
 from utils.llm_client import call_vllm
-from utils.redis_client import store_metadata, get_metadata
+
+# Local utility imports
+from utils.parser import parse_csv, parse_pdf
+from utils.redis_client import get_metadata, store_metadata
+from utils.rerank import rerank
+from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
 
 
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
-    """Load the selected template from insights.json"""
-    with open(
-        "/home/ubuntu/cfo_dashboard/prompts/insights.json",
-        "r",
-    ) as f:
+    """Load the selected template from insights.json."""
+    with open("/home/ubuntu/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
 
 
 # -------- Ingestion Pipeline --------
 def ingest_document(path: str, metadata: dict):
-    """Embed and index documents (PDF or CSV) into Qdrant"""
+    """Embed and index documents (PDF or CSV) into Qdrant."""
     if path.endswith(".pdf"):
         text = parse_pdf(path)
         chunks = chunk_text(text)
@@ -54,27 +55,23 @@ def ingest_document(path: str, metadata: dict):
 
 # -------- Query Pipeline (Unified RAG + Invoice Logic) --------
 def query_rag(query: str, template_name: str = "default", top_k: int = 20):
-    """Main RAG query pipeline with intelligent invoice filtering and context composition"""
-
+    """Main RAG query pipeline with intelligent invoice filtering and context composition."""
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
-    docs = [get_metadata(r.payload["chunk_id"])["content"] for r in results]
+    docs = []
+    for r in results:
+        metadata = get_metadata(r.payload["chunk_id"])
+        if metadata and "content" in metadata:
+            docs.append(metadata["content"])
     reranked = rerank(query, docs)
+    top_matches = "\n\n".join(reranked[:2])
 
     # Step 2: Load and preprocess data
-    ar_df = pd.read_csv(
-        "/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv"
-        )
-    ap_df = pd.read_csv(
-        "/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv"
-        )
-    po_text = parse_pdf(
-        "/home/ubuntu/cfo_dashboard/data/PO_T&C.pdf"
-        )
-    reg_text = parse_pdf(
-        "/home/ubuntu/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf"
-        )
+    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
+    po_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/PO_T&C.pdf")
+    reg_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf")
 
     # Normalize dates
     for df in [ar_df, ap_df]:
@@ -138,7 +135,7 @@ Regulatory Context:
 {reg_text}
 
 Retrieved Context (Top Matches):
-{'\n\n'.join(reranked[:2])}
+{top_matches}
 """
 
     AR_context = "\n\n".join(
@@ -148,7 +145,7 @@ Retrieved Context (Top Matches):
             "Regulations:",
             reg_text,
             "Retrieved Context:",
-            "\n\n".join(reranked[:2]),
+            top_matches,
         ]
     )
 
@@ -161,7 +158,7 @@ Retrieved Context (Top Matches):
             "Regulations:",
             reg_text,
             "Retrieved Context:",
-            "\n\n".join(reranked[:2]),
+            top_matches,
         ]
     )
 

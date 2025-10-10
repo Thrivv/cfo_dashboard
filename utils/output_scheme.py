@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+"""Output schema definitions for the CFO dashboard."""
+
 from typing import List
+
+from pydantic import BaseModel
 
 
 class Insight(BaseModel):

@@ -6,10 +6,15 @@ __pycache__/
 
 # Virtual environment
 venv/
+.venv/
 
 # Env files
 .env
 .env.*
+
+# Streamlit secrets
+secrets.toml
+.streamlit/secrets.toml
 
 # IDE / Editor
 .vscode/

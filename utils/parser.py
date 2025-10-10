@@ -1,6 +1,8 @@
-import fitz  # PyMuPDF
+"""Data parsing utilities for the CFO dashboard."""
+
 import csv
-from datetime import datetime
+
+import fitz  # PyMuPDF
 
 
 def parse_pdf(path: str) -> str:

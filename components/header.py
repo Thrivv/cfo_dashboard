@@ -1,8 +1,10 @@
+"""Header component for the CFO dashboard."""
+
 import streamlit as st
 
 
 def render_header():
-    """Render application header with dynamic title/subtitle derived from session state"""
+    """Render application header with dynamic title/subtitle from session state."""
     current_page = st.session_state.get("current_page", "Home")
     page_to_title = {
         "Home": "Home",

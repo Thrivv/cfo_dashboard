@@ -1,9 +1,12 @@
-import streamlit as st
+"""Session state management for the CFO dashboard."""
+
 from datetime import datetime, timedelta
+
+import streamlit as st
 
 
 def init_session_state():
-    """Initialize session state variables"""
+    """Initialize session state variables."""
     if "current_page" not in st.session_state:
         st.session_state.current_page = "CFO Dashboard"
 
@@ -34,7 +37,7 @@ def init_session_state():
 
 
 def check_session_timeout(timeout_minutes=60):
-    """Check if session has timed out"""
+    """Check if session has timed out."""
     if "last_activity" in st.session_state:
         time_since_activity = datetime.now() - st.session_state.last_activity
         if time_since_activity > timedelta(minutes=timeout_minutes):
@@ -43,7 +46,7 @@ def check_session_timeout(timeout_minutes=60):
 
 
 def clear_session_data():
-    """Clear sensitive session data"""
+    """Clear sensitive session data."""
     keys_to_clear = ["financial_data", "uploaded_file", "chat_history"]
 
     for key in keys_to_clear:
@@ -52,7 +55,7 @@ def clear_session_data():
 
 
 def get_session_info():
-    """Get session information"""
+    """Get session information."""
     if "session_start" in st.session_state:
         session_duration = datetime.now() - st.session_state.session_start
         return {
@@ -65,7 +68,7 @@ def get_session_info():
 
 
 def update_user_preferences(preferences):
-    """Update user preferences"""
+    """Update user preferences."""
     if "user_preferences" not in st.session_state:
         st.session_state.user_preferences = {}
 
@@ -73,5 +76,5 @@ def update_user_preferences(preferences):
 
 
 def get_user_preference(key, default=None):
-    """Get user preference value"""
+    """Get user preference value."""
     return st.session_state.get("user_preferences", {}).get(key, default)
