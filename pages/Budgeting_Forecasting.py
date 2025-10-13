@@ -259,7 +259,7 @@ def render():
 
         with col1:
             # AI-specific department selector
-            ai_departments = ["Sales", "Marketing", "IT", "HR", "Finance", "Operations"]
+            ai_departments = ["Finance","Sales", "Marketing", "IT", "HR", "Operations"]
             ai_selected_dept = st.selectbox(
                 "Department", ai_departments, key="ai_dept_selector"
             )
