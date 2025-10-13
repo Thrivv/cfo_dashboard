@@ -15,7 +15,6 @@ from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 runpod.api_key = RUNPOD_API_KEY
 endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
-
 def run_forecast_job(prompt, sampling_params=None):
     """Submit a job to the Forecasting RunPod serverless endpoint.
 
@@ -31,7 +30,7 @@ def run_forecast_job(prompt, sampling_params=None):
 
         run_request = endpoint.run_sync(
             input_data,
-            timeout=60,  # Timeout in seconds
+            timeout=120,  # Timeout in seconds
         )
         return run_request
     except TimeoutError:
@@ -431,16 +430,15 @@ Recent Values:
         hist_max = historical_df_dep["Revenue (Actual)"].max()
 
         historical_summary = f"""
-
-HISTORICAL DATA SUMMARY (Past 2 Years for {department.upper()}):
-Average Actual Revenue: ${hist_avg:,.0f}
-Actual Revenue Range: ${hist_min:,.0f} - ${hist_max:,.0f}
-"""
-
+        HISTORICAL DATA SUMMARY (Past 2 Years for {department.upper()}):
+        Average Actual Revenue: ${hist_avg:,.0f}
+        Actual Revenue Range: ${hist_min:,.0f} - ${hist_max:,.0f}
+        """
+        
     prompt = f""""Analyze this forecast data and provide concise business insights for the {department} department.
     Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
     If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that might justify this prediction.
-    \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justified against historical data]\n👉 [Insight 2 with specific values, justified, explained the resason of abnormality]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
+    \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justify it against historical data]\n👉 [Insight 2 with specific values, justified, explained the resason of abnormality]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
     RULES:\n• Use exact values from the data.\n• MAXIMUM 90 WORDS for Key Findings - count and stop at 90.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• EXACTLY 2 insights in Key Findings.\n• Be extremely brief and direct.\n• Focus on key trends only.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts.\n
     • The Conclusion must be a concise summary (2-3 sentences)."""
     return prompt
@@ -549,7 +547,7 @@ def generate_chatbot_forecast_insights(
 
         if df.empty:
             return "No forecast data available for the selected date range to generate insights."
-
+        
         forecast_values = df["Value"].values
         min_value, max_value, avg_value = (
             forecast_values.min(),
@@ -583,25 +581,22 @@ Recent Values:
 {df.tail(5).to_string(index=False)}"""
 
         prompt = f"""Analyze this forecast data and provide concise business insights for the {department} department, justify the insights as per{data_summary} provide breif explanation for the peak or unexpected trends.
-
-Provide insights in this format:
-Key Findings:
-👉 [Insight 1 with specific values, provide justification]
-👉 [Insight 2 with specific values, provide possible cause]
-
-Conclusion:
-[2-3 sentence summary of the key findings and their implications.]
-
-RULES:
-• Use exact values from the data.
-• MAXIMUM 100 WORDS for Key Findings - count and stop at 100.
-• Use arrows (👉) for Key Findings.
-• Each arrow item must be on a separate line.
-• EXACTLY 3 insights in Key Findings.
-• Be extremely brief and direct.
-• Focus on key trends only.
-• Output must be plain text only — no Markdown, no LaTeX, no styled fonts.
-• The Conclusion must be a concise summary (2-3 sentences)."""
+        Provide insights in this format:
+        Key Findings:
+        👉 [Insight 1 with specific values, provide justification]
+        👉 [Insight 2 with specific values, provide possible cause using data summary]
+        Conclusion:
+        [2-3 sentence summary of the key findings and their implications.]
+        RULES:
+        • Use exact values from the data.
+        • MAXIMUM 100 WORDS for Key Findings - count and stop at 100.
+        • Use arrows (👉) for Key Findings.
+        • Each arrow item must be on a separate line.
+        • EXACTLY 3 insights in Key Findings.
+        • Be extremely brief and direct.
+        • Focus on key trends only.
+        • Output must be plain text only — no italics, alpha numerics, no Markdown, no LaTeX, no styled fonts.
+        • The Conclusion must be a concise summary (2-3 sentences)."""
 
         for attempt in range(max_retries):
             llm_response = run_chatbot_job(prompt)
@@ -610,7 +605,6 @@ RULES:
                 insights = llm_response["generated_text"]
             else:
                 insights = str(llm_response)
-                # insights = _format_llm_output(insights, department)
 
             if _validate_llm_output(insights):
                 return _format_llm_output(insights, department)

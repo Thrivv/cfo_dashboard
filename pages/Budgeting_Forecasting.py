@@ -1,12 +1,11 @@
 """Budgeting and Forecasting page with revenue forecasting capabilities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-
 from services.forecast_services import (
     create_forecast_chart_with_plotly,
     run_forecast_job,
@@ -76,12 +75,12 @@ def render():
 
         # Department selection for all charts
         departments = [
+            "Finance",
             "Sales",
             "Marketing",
             "IT",
             "HR",
             "Operations",
-            "Finance",
             "All Departments",
         ]
         selected_dept = st.selectbox(
@@ -268,18 +267,18 @@ def render():
         with col2:
             display_start_date = st.date_input(
                 "Start Date",
-                value=datetime(2025, 10, 1).date(),
-                min_value=datetime(2024, 12, 31).date(),
-                max_value=datetime(2026, 1, 24).date(),
+                value= pd.to_datetime(date.today()),
+                min_value=pd.to_datetime(date.today()),
+                max_value=pd.to_datetime(datetime.today() + timedelta(days=30*13)),
                 key="forecast_display_start_date",
             )
 
         with col3:
             display_end_date = st.date_input(
                 "End Date",
-                value=datetime(2025, 10, 31).date(),
-                min_value=datetime(2024, 12, 31).date(),
-                max_value=datetime(2026, 1, 24).date(),
+                value= pd.to_datetime(datetime.today() + timedelta(days=30)),
+                min_value= pd.to_datetime(date.today()),
+                max_value=pd.to_datetime(datetime.today() + timedelta(days=30*13)),
                 key="forecast_display_end_date",
             )
 
