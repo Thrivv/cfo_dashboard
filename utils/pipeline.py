@@ -21,7 +21,7 @@ from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
     """Load the selected template from insights.json."""
-    with open("/home/ubuntu/cfo_dashboard/prompts/insights.json", "r") as f:
+    with open("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
 
@@ -68,10 +68,10 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     top_matches = "\n\n".join(reranked[:2])
 
     # Step 2: Load and preprocess data
-    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
-    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
-    po_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/PO_T&C.pdf")
-    reg_text = parse_pdf("/home/ubuntu/cfo_dashboard/data/RPSR_RPSCSR_UAE.pdf")
+    ar_df = pd.read_csv("data/AR_Invoice.csv")
+    ap_df = pd.read_csv("data/AP_Invoice.csv")
+    po_text = parse_pdf("data/PO_T&C.pdf")
+    reg_text = parse_pdf("data/RPSR_RPSCSR_UAE.pdf")
 
     # Normalize dates
     for df in [ar_df, ap_df]:
