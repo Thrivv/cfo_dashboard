@@ -267,18 +267,18 @@ def render():
         with col2:
             display_start_date = st.date_input(
                 "Start Date",
-                value= pd.to_datetime(date.today()),
+                value=pd.to_datetime(date.today()),
                 min_value=pd.to_datetime(date.today()),
-                max_value=pd.to_datetime(datetime.today() + timedelta(days=30*13)),
+                max_value=pd.to_datetime(datetime.today() + timedelta(days=30 * 13)),
                 key="forecast_display_start_date",
             )
 
         with col3:
             display_end_date = st.date_input(
                 "End Date",
-                value= pd.to_datetime(datetime.today() + timedelta(days=30)),
-                min_value= pd.to_datetime(date.today()),
-                max_value=pd.to_datetime(datetime.today() + timedelta(days=30*13)),
+                value=pd.to_datetime(datetime.today() + timedelta(days=30)),
+                min_value=pd.to_datetime(date.today()),
+                max_value=pd.to_datetime(datetime.today() + timedelta(days=30 * 13)),
                 key="forecast_display_end_date",
             )
 

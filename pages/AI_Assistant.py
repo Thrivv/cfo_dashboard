@@ -249,7 +249,8 @@ def render():
                         )
 
                         insights = generate_chatbot_forecast_insights(
-                            forecast_data, forecast_department)
+                            forecast_data, forecast_department
+                        )
                         # Merge insights into the main message
                         ai_msg += f"<br/>{insights}"
 

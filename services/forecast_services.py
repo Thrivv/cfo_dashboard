@@ -15,6 +15,7 @@ from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 runpod.api_key = RUNPOD_API_KEY
 endpoint = runpod.Endpoint(RUNPOD_ENDPOINT_ID)
 
+
 def run_forecast_job(prompt, sampling_params=None):
     """Submit a job to the Forecasting RunPod serverless endpoint.
 
@@ -37,6 +38,7 @@ def run_forecast_job(prompt, sampling_params=None):
         return "Job timed out. Please try again."
     except Exception as e:
         return f"Error: {str(e)}"
+
 
 class ForecastPreviewService:
     """Service for generating forecast previews for homepage."""
@@ -434,7 +436,7 @@ Recent Values:
         Average Actual Revenue: ${hist_avg:,.0f}
         Actual Revenue Range: ${hist_min:,.0f} - ${hist_max:,.0f}
         """
-        
+
     prompt = f""""Analyze this forecast data and provide concise business insights for the {department} department.
     Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
     If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that might justify this prediction.
@@ -547,7 +549,7 @@ def generate_chatbot_forecast_insights(
 
         if df.empty:
             return "No forecast data available for the selected date range to generate insights."
-        
+
         forecast_values = df["Value"].values
         min_value, max_value, avg_value = (
             forecast_values.min(),
