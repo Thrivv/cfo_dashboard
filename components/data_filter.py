@@ -183,9 +183,9 @@ def apply_filters(df, filters):
             ]
 
     # Step 4: Apply period aggregation
-    period_type = filters.get("period", "Monthly")
+    period_type = filters.get("period", "Default")
 
-    if period_type and period_type != "Monthly":
+    if period_type and period_type not in ["Default", "Monthly"]:
         filtered_df = apply_period_aggregation(filtered_df, period_type)
 
     return filtered_df
@@ -226,8 +226,8 @@ def get_filter_summary(filtered_df, filters):
                 )
 
     # Check period filter - only show if it's been explicitly changed from default
-    period = filters.get("period", "Yearly")  # Updated default to match new default
-    if period and period != "Yearly":  # Only show if not the default
+    period = filters.get("period", "Default")  # Updated default to match new default
+    if period and period != "Default":  # Only show if not the default
         summary["active_filters"].append(f"Period: {period}")
 
     return summary
@@ -247,15 +247,15 @@ def validate_filters(filters):
         "start_date": None,
         "end_date": None,
         "date_range": None,
-        "period": "Yearly",
+        "period": "Default",
     }
 
     # Merge with defaults
     validated_filters = {**default_filters, **filters}
 
     # Validate period
-    valid_periods = ["Monthly", "Quarterly", "Yearly"]
+    valid_periods = ["Default", "Monthly", "Quarterly", "Yearly"]
     if validated_filters["period"] not in valid_periods:
-        validated_filters["period"] = "Monthly"
+        validated_filters["period"] = "Default"
 
     return validated_filters
