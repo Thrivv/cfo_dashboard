@@ -2,13 +2,14 @@
 
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
 from components.alert_card import render_cfo_alerts_section
-from components.data_filter import apply_filters, get_filter_summary, validate_filters
+from components.data_filter import apply_filters, get_filter_summary, validate_filters, parse_date_column
 from services.forecast_services import ForecastPreviewService
 from utils import get_data_loader
 
@@ -18,26 +19,65 @@ def _clear_cache():
     cache_keys = [
         key
         for key in st.session_state.keys()
-        if key.startswith(
-            ("filtered_data_", "profit_trend_", "inventory_trend_", "capex_trend_")
-        )
+        if key.startswith(("filtered_data_", "graph_data_"))
     ]
     for key in cache_keys:
         del st.session_state[key]
 
 
+def _get_chart_data(data_source, columns, period="Default"):
+    """Get chart data without modifying data points - let period aggregation handle it."""
+    chart_data = data_source[columns].copy()
+    chart_data = chart_data.sort_values("Date")
+    return chart_data
+
+
+
+
 def _apply_plot_theme(
-    fig: go.Figure, height: int = 340, title: str | None = None
+    fig: go.Figure, height: int = 340, title: str | None = None, fix_legend: bool = False
 ) -> go.Figure:
-    fig.update_layout(
-        template="plotly_dark",
-        height=height,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=20, t=50 if title else 20, b=40),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        title=dict(text=title) if title else None,
-    )
+    # Only set title if provided and no existing title
+    layout_updates = {
+        "template": "plotly_dark",
+        "height": height,
+        "paper_bgcolor": "rgba(0,0,0,0)",
+        "plot_bgcolor": "rgba(0,0,0,0)",
+    }
+    
+    # Only add title if provided and no existing title
+    if title and (not fig.layout.title or not fig.layout.title.text):
+        layout_updates["title"] = dict(text=title)
+    
+    # Only set default margin and legend if not already configured
+    if not hasattr(fig.layout, 'margin') or fig.layout.margin is None:
+        layout_updates["margin"] = dict(l=40, r=20, t=50 if title else 20, b=40)
+    
+    if not hasattr(fig.layout, 'legend') or fig.layout.legend is None:
+        layout_updates["legend"] = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    
+    fig.update_layout(**layout_updates)
+    
+    # Apply legend fix if requested
+    if fix_legend:
+        legend_fix_updates = {
+            "margin": dict(l=40, r=20, t=60, b=120),
+            "legend": dict(
+                orientation="h", 
+                yanchor="bottom", 
+                y=-0.5, 
+                xanchor="center", 
+                x=0.5,
+                font=dict(size=12)
+            )
+        }
+        
+        # Only add title if provided and not already set
+        if title and (not fig.layout.title or not fig.layout.title.text):
+            legend_fix_updates["title"] = dict(text=title)
+        
+        fig.update_layout(**legend_fix_updates)
+    
     fig.update_xaxes(
         gridcolor="rgba(255,255,255,0.08)",
         tickformat="%b %d, %Y",  # Format dates as "Jan 15, 2024"
@@ -246,22 +286,8 @@ def render():
                     st.session_state[filter_key] = filtered_df_result
                 filtered_df = st.session_state[filter_key]
 
-                # Handle Default filter - create separate data sources for KPIs vs Graphs
-                if st.session_state.cfo_filters.get("period") == "Default":
-                    # For KPIs and other elements, use full historical data
-                    kpi_df = filtered_df
-                    
-                    # For graphs, use 2-year date range based on available data
-                    if not filtered_df.empty:
-                        max_date = filtered_df["Date"].max()
-                        two_years_ago = max_date - pd.DateOffset(years=2)
-                        graph_df = filtered_df[filtered_df["Date"] >= two_years_ago].copy()
-                    else:
-                        graph_df = filtered_df
-                else:
-                    # For other filters, use the same data for both KPIs and graphs
-                    kpi_df = filtered_df
-                    graph_df = filtered_df
+                # Use filtered data for both KPIs and charts
+                kpi_df = filtered_df
 
                 # Use filtered data for calculations
                 latest_raw = filtered_df.iloc[-1]
@@ -422,50 +448,83 @@ def render():
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Charts for Financial Performance with caching
-                # Profitability Trend Chart (Revenue vs Forecast moved to Forecasting page)
-                # Use graph_df for Default filter, filtered_df for other filters
-                chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                chart_key = f"profit_trend_{hash(str(st.session_state.cfo_filters))}"
-                if chart_key not in st.session_state:
-                    # Use processed data - Date column already exists and is properly formatted
-                    profit_trend = chart_data[
-                        ["Date", "Gross Profit", "EBITDA", "Net Income"]
-                    ].copy()
-
-                    # If we have too many data points, sample them for better visualization
-                    if len(profit_trend) > 50:
-                        # Sample every nth record to get a reasonable number of points
-                        step = len(profit_trend) // 50
-                        profit_trend = profit_trend.iloc[::step]
-
-                    st.session_state[chart_key] = profit_trend
+                # Charts for Financial Performance
+                # Handle Default period - show only last 2 years for graphs
+                period = st.session_state.cfo_filters.get("period", "Default")
+                
+                if period == "Default":
+                    # For Default period, create 2-year data source for graphs only
+                    if not raw_df.empty and "Date / Period" in raw_df.columns:
+                        # Parse dates from raw data
+                        raw_df_copy = raw_df.copy()
+                        raw_df_copy["Date"] = parse_date_column(raw_df_copy["Date / Period"])
+                        raw_df_copy = raw_df_copy.dropna(subset=["Date"])
+                        
+                        if not raw_df_copy.empty:
+                            max_date = raw_df_copy["Date"].max()
+                            two_years_ago = max_date - pd.DateOffset(years=2)
+                            
+                            # Create 2-year data from original dataset
+                            two_year_data = raw_df_copy[raw_df_copy["Date"] >= two_years_ago].copy()
+                            
+                            # Apply other filters (business unit, date range) to the 2-year data
+                            graph_filters = st.session_state.cfo_filters.copy()
+                            graph_filters["period"] = None  # No period aggregation for Default
+                            
+                            graph_key = f"graph_data_{hash(str(graph_filters))}_{two_years_ago.date()}_{max_date.date()}"
+                            if graph_key not in st.session_state:
+                                graph_df_result = apply_filters(two_year_data, graph_filters)
+                                # Sort by date and sample 20 records evenly across the 2-year period
+                                graph_df_result = graph_df_result.sort_values("Date")
+                                if len(graph_df_result) > 20:
+                                    # Sample 20 records evenly across the time period
+                                    indices = np.linspace(0, len(graph_df_result) - 1, 20, dtype=int)
+                                    graph_df_result = graph_df_result.iloc[indices].copy()
+                                st.session_state[graph_key] = graph_df_result
+                            data_source = st.session_state[graph_key]
+                        else:
+                            data_source = filtered_df
+                    else:
+                        data_source = filtered_df
                 else:
-                    profit_trend = st.session_state[chart_key]
+                    # For other periods, use the filtered data with period aggregation
+                    data_source = filtered_df
+                
+                # Profitability Trend Chart
+                profit_trend = _get_chart_data(data_source, ["Date", "Gross Profit", "EBITDA", "Net Income"], period)
 
                 fig = go.Figure()
                 fig.add_trace(
-                    go.Bar(
+                    go.Scatter(
                         x=profit_trend["Date"],
                         y=profit_trend["Gross Profit"],
+                        mode="lines",
+                        fill="tozeroy",
                         name="Gross Profit",
-                        marker_color="#2ecc71",
+                        line=dict(color="#2ecc71", width=3),
+                        fillcolor="rgba(46, 204, 113, 0.6)",
                     )
                 )
                 fig.add_trace(
-                    go.Bar(
+                    go.Scatter(
                         x=profit_trend["Date"],
                         y=profit_trend["EBITDA"],
+                        mode="lines",
+                        fill="tozeroy",
                         name="EBITDA",
-                        marker_color="#3498db",
+                        line=dict(color="#ffffff", width=3),
+                        fillcolor="rgba(255, 255, 255, 0.6)",
                     )
                 )
                 fig.add_trace(
-                    go.Bar(
+                    go.Scatter(
                         x=profit_trend["Date"],
                         y=profit_trend["Net Income"],
+                        mode="lines",
+                        fill="tozeroy",
                         name="Net Income",
-                        marker_color="#e74c3c",
+                        line=dict(color="#e74c3c", width=3),
+                        fillcolor="rgba(231, 76, 60, 0.6)",
                     )
                 )
                 fig = _apply_plot_theme(fig, height=360, title="Profitability Trend")
@@ -499,131 +558,94 @@ def render():
                 col1, col2, col3 = st.columns(3)
 
                 with col1:
-                    # AR Analysis - Real Data
+                    # AR Analysis - Real Data Trend Chart
                     ar = latest_raw.get("Accounts Receivable (AR)", 0)
                     dso = latest_raw.get("Days Sales Outstanding (DSO)", 0)
 
-                    # Create AR trend chart using graph data
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    ar_trend_data = chart_data[
-                        [
-                            "Date",
-                            "Accounts Receivable (AR)",
-                            "Days Sales Outstanding (DSO)",
-                        ]
-                    ].copy()
+                    # Get data for AR chart
+                    ar_trend_data = data_source[["Date", "Accounts Receivable (AR)", "Days Sales Outstanding (DSO)"]].copy()
+                    ar_trend_data = ar_trend_data.sort_values("Date")
 
                     fig = go.Figure()
-                    # Add bar chart for AR Balance
                     fig.add_trace(
-                        go.Bar(
+                        go.Scatter(
                             x=ar_trend_data["Date"],
                             y=ar_trend_data["Accounts Receivable (AR)"],
+                            mode="lines",
+                            fill="tozeroy",
                             name="AR Balance",
-                            marker_color="#3498db",
+                            line=dict(color="#3498db", width=4),
+                            fillcolor="rgba(52, 152, 219, 0.8)",
                             yaxis="y",
                         )
                     )
-                    # Add line chart for DSO
                     fig.add_trace(
                         go.Scatter(
                             x=ar_trend_data["Date"],
                             y=ar_trend_data["Days Sales Outstanding (DSO)"],
-                            mode="lines+markers",
+                            mode="lines",
+                            fill="tozeroy",
                             name="DSO (days)",
+                            line=dict(color="#2ecc71", width=4),
+                            fillcolor="rgba(46, 204, 113, 0.8)",
                             yaxis="y2",
-                            line=dict(color="#e74c3c", width=3),
-                            marker=dict(size=6),
                         )
                     )
                     fig.update_layout(yaxis2=dict(overlaying="y", side="right"))
                     fig = _apply_plot_theme(
                         fig,
-                        height=300,
+                        height=400,
                         title=f"AR Trend & DSO (Current: {dso:.0f} days)",
-                    )
-                    # Fix legend visibility
-                    fig.update_layout(
-                        margin=dict(l=40, r=20, t=60, b=60),
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=-0.15, 
-                            xanchor="center", 
-                            x=0.5,
-                            font=dict(size=12)
-                        )
+                        fix_legend=True,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
-                    # AP Analysis - Real Data
+                    # AP Analysis - Real Data Trend Chart
                     ap = latest_raw.get("Accounts Payable (AP)", 0)
                     dpo = latest_raw.get("Days Payable Outstanding (DPO)", 0)
 
-                    # Create AP trend chart using graph data
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    ap_trend_data = chart_data[
-                        [
-                            "Date",
-                            "Accounts Payable (AP)",
-                            "Days Payable Outstanding (DPO)",
-                        ]
-                    ].copy()
+                    # Get data for AP chart
+                    ap_trend_data = data_source[["Date", "Accounts Payable (AP)", "Days Payable Outstanding (DPO)"]].copy()
+                    ap_trend_data = ap_trend_data.sort_values("Date")
 
                     fig = go.Figure()
-                    # Add bar chart for AP Balance
                     fig.add_trace(
-                        go.Bar(
+                        go.Scatter(
                             x=ap_trend_data["Date"],
                             y=ap_trend_data["Accounts Payable (AP)"],
+                            mode="lines",
+                            fill="tozeroy",
                             name="AP Balance",
-                            marker_color="#e74c3c",
+                            line=dict(color="#e74c3c", width=4),
+                            fillcolor="rgba(231, 76, 60, 0.8)",
                             yaxis="y",
                         )
                     )
-                    # Add line chart for DPO
                     fig.add_trace(
                         go.Scatter(
                             x=ap_trend_data["Date"],
                             y=ap_trend_data["Days Payable Outstanding (DPO)"],
-                            mode="lines+markers",
+                            mode="lines",
+                            fill="tozeroy",
                             name="DPO (days)",
+                            line=dict(color="#f39c12", width=4),
+                            fillcolor="rgba(243, 156, 18, 0.8)",
                             yaxis="y2",
-                            line=dict(color="#f39c12", width=3),
-                            marker=dict(size=6),
                         )
                     )
                     fig.update_layout(yaxis2=dict(overlaying="y", side="right"))
                     fig = _apply_plot_theme(
                         fig,
-                        height=300,
+                        height=400,
                         title=f"AP Trend & DPO (Current: {dpo:.0f} days)",
-                    )
-                    # Fix legend visibility
-                    fig.update_layout(
-                        margin=dict(l=40, r=20, t=60, b=60),
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=-0.15, 
-                            xanchor="center", 
-                            x=0.5,
-                            font=dict(size=12)
-                        )
+                        fix_legend=True,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col3:
                     # Net Cash Flow by Business Unit
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    cash_by_unit = (
-                        chart_data.groupby("Business Unit / Department")[
-                            "Net Cash Flow"
-                        ]
-                        .sum()
-                        .reset_index()
-                    )
+                    cash_by_unit = data_source.groupby("Business Unit / Department")["Net Cash Flow"].sum().reset_index()
 
                     fig = px.bar(
                         cash_by_unit,
@@ -634,7 +656,7 @@ def render():
                         color_continuous_scale=["red", "yellow", "green"],
                     )
                     fig = _apply_plot_theme(
-                        fig, height=450, title="Net Cash Flow by Business Unit"
+                        fig, height=400, title="Net Cash Flow by Business Unit"
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -706,9 +728,8 @@ def render():
 
                 with col1:
                     # Inventory vs Sales Pipeline (Donut Chart)
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    inventory_total = chart_data["Inventory Value"].sum()
-                    pipeline_total = chart_data["Sales Pipeline Value"].sum()
+                    inventory_total = filtered_df["Inventory Value"].sum()
+                    pipeline_total = filtered_df["Sales Pipeline Value"].sum()
                     
                     fig = go.Figure(data=[go.Pie(
                         labels=['Inventory Value', 'Sales Pipeline Value'],
@@ -717,27 +738,14 @@ def render():
                         marker_colors=['#3498db', '#2ecc71']
                     )])
                     fig = _apply_plot_theme(
-                        fig, height=400, title="Inventory vs Sales Pipeline"
-                    )
-                    # Fix legend visibility
-                    fig.update_layout(
-                        margin=dict(l=40, r=20, t=60, b=60),
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=-0.15, 
-                            xanchor="center", 
-                            x=0.5,
-                            font=dict(size=12)
-                        )
+                        fig, height=400, title="Inventory vs Sales Pipeline", fix_legend=True
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
                     # CapEx vs OpEx Trend (Donut Chart)
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    capex_total = chart_data["Capital Expenditure (CapEx)"].sum()
-                    opex_total = chart_data["Operational Expenditure (OpEx)"].sum()
+                    capex_total = filtered_df["Capital Expenditure (CapEx)"].sum()
+                    opex_total = filtered_df["Operational Expenditure (OpEx)"].sum()
                     
                     fig = go.Figure(data=[go.Pie(
                         labels=['Capital Expenditure (CapEx)', 'Operational Expenditure (OpEx)'],
@@ -746,30 +754,13 @@ def render():
                         marker_colors=['#e74c3c', '#3498db']
                     )])
                     fig = _apply_plot_theme(
-                        fig, height=400, title="CapEx vs OpEx Trend"
-                    )
-                    # Fix legend visibility
-                    fig.update_layout(
-                        margin=dict(l=40, r=20, t=60, b=60),
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=-0.15, 
-                            xanchor="center", 
-                            x=0.5,
-                            font=dict(size=12)
-                        )
+                        fig, height=400, title="CapEx vs OpEx Trend", fix_legend=True
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
                 with col3:
                     # Headcount Distribution by Business Unit (Pie Chart)
-                    chart_data = graph_df if st.session_state.cfo_filters.get("period") == "Default" else filtered_df
-                    headcount_by_unit = (
-                        chart_data.groupby("Business Unit / Department")["Headcount"]
-                        .sum()
-                        .reset_index()
-                    )
+                    headcount_by_unit = filtered_df.groupby("Business Unit / Department")["Headcount"].sum().reset_index()
 
                     fig = px.pie(
                         headcount_by_unit,
@@ -779,19 +770,7 @@ def render():
                         color_discrete_sequence=px.colors.qualitative.Set3
                     )
                     fig = _apply_plot_theme(
-                        fig, height=400, title="Headcount Distribution by Business Unit"
-                    )
-                    # Fix legend visibility
-                    fig.update_layout(
-                        margin=dict(l=40, r=20, t=60, b=60),
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=-0.15, 
-                            xanchor="center", 
-                            x=0.5,
-                            font=dict(size=12)
-                        )
+                        fig, height=400, title="Headcount Distribution by Business Unit", fix_legend=True
                     )
                     st.plotly_chart(fig, use_container_width=True)
 

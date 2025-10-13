@@ -94,8 +94,10 @@ def apply_period_aggregation(df, period_type):
     if "Date" not in df.columns or df.empty:
         return df
 
-    # Create period column
-    if period_type == "Quarterly":
+    # Create period column based on period type
+    if period_type == "Monthly":
+        df["Period"] = df["Date"].dt.to_period("M")
+    elif period_type == "Quarterly":
         df["Period"] = df["Date"].dt.to_period("Q")
     elif period_type == "Yearly":
         df["Period"] = df["Date"].dt.to_period("Y")
@@ -119,15 +121,10 @@ def apply_period_aggregation(df, period_type):
     agg_dict = {col: "sum" for col in numeric_cols}
     aggregated_df = df.groupby(group_cols).agg(agg_dict).reset_index()
 
-    # Update Date / Period column for display
-    if period_type == "Quarterly":
-        aggregated_df["Date / Period"] = aggregated_df["Period"].astype(str)
-        # Create Date column for charts
-        aggregated_df["Date"] = aggregated_df["Period"].dt.end_time
-    elif period_type == "Yearly":
-        aggregated_df["Date / Period"] = aggregated_df["Period"].astype(str)
-        # Create Date column for charts
-        aggregated_df["Date"] = aggregated_df["Period"].dt.end_time
+    # Create Date column for charts using period end time
+    aggregated_df["Date"] = aggregated_df["Period"].dt.end_time
+    # Keep original period string for display
+    aggregated_df["Date / Period"] = aggregated_df["Period"].astype(str)
 
     return aggregated_df
 
@@ -185,7 +182,7 @@ def apply_filters(df, filters):
     # Step 4: Apply period aggregation
     period_type = filters.get("period", "Default")
 
-    if period_type and period_type not in ["Default", "Monthly"]:
+    if period_type and period_type not in ["Default", None]:
         filtered_df = apply_period_aggregation(filtered_df, period_type)
 
     return filtered_df
