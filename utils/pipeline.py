@@ -21,7 +21,7 @@ from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
 # -------- Template Loader --------
 def load_template(template_name: str) -> str:
     """Load the selected template from insights.json."""
-    with open("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/prompts/insights.json", "r") as f:
+    with open("prompts/insights.json", "r") as f:
         templates = json.load(f)
     return templates.get(template_name, templates["default"])
 

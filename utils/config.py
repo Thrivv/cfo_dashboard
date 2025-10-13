@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import streamlit as st
 
 # Try to load from .env first (for backward compatibility)
-load_dotenv(dotenv_path="/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_dashboard/.env")
+load_dotenv(dotenv_path=".env")
 
 
 def get_secret(key, default=None):
