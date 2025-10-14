@@ -29,7 +29,7 @@ REDIS_PORT = int(get_secret("REDIS_PORT", 6379))
 REDIS_USERNAME = get_secret("REDIS_USERNAME")
 REDIS_PASSWORD = get_secret("REDIS_PASSWORD")
 
-# FinBERT Model
+# Embedding Model
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Cohere

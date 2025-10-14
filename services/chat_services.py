@@ -49,6 +49,7 @@ def run_chatbot_job(prompt):
         return f"Error: {str(e)}"
 
 
+
 def process_financial_question(question):
     """Process questions - let AI determine if financial data is needed.
 
