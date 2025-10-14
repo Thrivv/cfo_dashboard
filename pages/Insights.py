@@ -20,6 +20,12 @@ from services.due_tables import (
 from services.generate_insights import generate_insights
 
 
+@st.cache_data(ttl=86400)
+def get_cached_insights():
+    """Generate and cache insights for 24 hours."""
+    return generate_insights()
+
+
 def render():
     """Render the insights page with financial analysis and reporting."""
     st.subheader("📊 Accounts Payable / Receivable Insights")
@@ -119,7 +125,7 @@ def render():
     st.subheader("AI Warnings and Opportunities")
     with st.spinner("Generating AI Warnings and Opportunities..."):
         try:
-            insights_data = generate_insights()
+            insights_data = get_cached_insights()
             opportunities = insights_data.get("opportunities", {})
             warnings = insights_data.get("warnings", {})
 

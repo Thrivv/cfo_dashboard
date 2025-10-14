@@ -42,12 +42,13 @@ def generate_due_tables():
         ).fillna(0)
 
     # --- AR Due upcoming (not paid & due within next 15 days) ---
-    ar_pending = ar_df[
+    ar_pending_filter = (
         (ar_df["Payment Status"].astype(str).str.lower() == "not paid")
         & (ar_df["Due Date"].notnull())
         & (ar_df["Due Date"] > today)
         & (ar_df["Due Date"] <= (today + timedelta(days=15)))
-    ].copy()
+    )
+    ar_pending = ar_df[ar_pending_filter].copy()
     ar_pending["Days Remaining"] = (ar_pending["Due Date"] - today).dt.days
     top_4_ar = ar_pending.nsmallest(8, "Due Date")
 
@@ -276,6 +277,10 @@ def view_risk_invoices(high_risk_invoices):
             ).dt.days
 
             display_columns.append("Overdue Days")
+
+    # Sort by Overdue Days if the column exists
+    if "Overdue Days" in df.columns:
+        df = df.sort_values(by="Overdue Days", ascending=False)
 
     # Format Due Date and Amount for display
     df["Due Date"] = pd.to_datetime(df.get("Due Date"), errors="coerce").dt.date
