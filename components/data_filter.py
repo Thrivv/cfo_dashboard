@@ -94,6 +94,14 @@ def apply_period_aggregation(df, period_type):
     if "Date" not in df.columns or df.empty:
         return df
 
+    # Ensure Date column is datetime
+    if not pd.api.types.is_datetime64_any_dtype(df["Date"]):
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df = df.dropna(subset=["Date"])
+
+    if df.empty:
+        return df
+
     # Create period column based on period type
     if period_type == "Monthly":
         df["Period"] = df["Date"].dt.to_period("M")
@@ -104,10 +112,10 @@ def apply_period_aggregation(df, period_type):
     else:
         return df
 
-    # Get numeric columns for aggregation
+    # Get numeric columns for aggregation (exclude Date and Period columns)
     numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
-    if "Date" in numeric_cols:
-        numeric_cols.remove("Date")
+    exclude_cols = ["Date", "Period"]
+    numeric_cols = [col for col in numeric_cols if col not in exclude_cols]
 
     if not numeric_cols:
         return df
@@ -119,12 +127,23 @@ def apply_period_aggregation(df, period_type):
 
     # Aggregate numeric columns
     agg_dict = {col: "sum" for col in numeric_cols}
+    
+    # For ratio columns, use mean instead of sum
+    ratio_columns = [col for col in numeric_cols if any(ratio in col.lower() for ratio in ["ratio", "margin", "turnover", "growth", "variance"])]
+    for col in ratio_columns:
+        if col in agg_dict:
+            agg_dict[col] = "mean"
+
     aggregated_df = df.groupby(group_cols).agg(agg_dict).reset_index()
 
     # Create Date column for charts using period end time
     aggregated_df["Date"] = aggregated_df["Period"].dt.end_time
     # Keep original period string for display
     aggregated_df["Date / Period"] = aggregated_df["Period"].astype(str)
+    
+    # Ensure Date column is datetime for proper chart rendering
+    if not pd.api.types.is_datetime64_any_dtype(aggregated_df["Date"]):
+        aggregated_df["Date"] = pd.to_datetime(aggregated_df["Date"], errors="coerce")
 
     return aggregated_df
 

@@ -40,7 +40,7 @@ def run_chatbot_job(prompt):
                 "application": "CFOChatbot",
                 "sampling_params": {"temperature": 0.1, "max_tokens": 512},
             },
-            timeout=60,  # Timeout in seconds
+            timeout=180,  # Timeout in seconds
         )
         return run_request
     except TimeoutError:

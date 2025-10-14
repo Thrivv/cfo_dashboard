@@ -6,16 +6,13 @@ from dotenv import load_dotenv
 import streamlit as st
 
 # Try to load from .env first (for backward compatibility)
-load_dotenv(dotenv_path="/home/ubuntu/cfo_dashboard/.env")
+load_dotenv(dotenv_path=".env")
 
 
 def get_secret(key, default=None):
-    """Get secret from Streamlit secrets or environment variables as fallback."""
-    try:
-        return st.secrets[key]
-    except (KeyError, AttributeError):
-        # Fallback to environment variables
-        return os.getenv(key, default)
+    """Get secret from environment variables."""
+    # Fallback to environment variables
+    return os.getenv(key, default)
 
 
 # Qdrant
@@ -29,7 +26,7 @@ REDIS_PORT = int(get_secret("REDIS_PORT", 6379))
 REDIS_USERNAME = get_secret("REDIS_USERNAME")
 REDIS_PASSWORD = get_secret("REDIS_PASSWORD")
 
-# FinBERT Model
+# Embedding Model
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Cohere

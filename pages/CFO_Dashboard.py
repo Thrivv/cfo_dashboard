@@ -26,9 +26,28 @@ def _clear_cache():
 
 
 def _get_chart_data(data_source, columns, period="Default"):
-    """Get chart data without modifying data points - let period aggregation handle it."""
-    chart_data = data_source[columns].copy()
-    chart_data = chart_data.sort_values("Date")
+    """Get chart data with proper handling for different periods."""
+    if data_source.empty:
+        return data_source
+    
+    # Ensure we have the required columns
+    available_columns = [col for col in columns if col in data_source.columns]
+    if not available_columns:
+        return data_source
+    
+    chart_data = data_source[available_columns].copy()
+    
+    # Sort by date if Date column exists
+    if "Date" in chart_data.columns:
+        chart_data = chart_data.sort_values("Date")
+    
+    # For aggregated periods (Monthly, Quarterly, Yearly), use all data points
+    # For Default period, limit to reasonable number of points for better visualization
+    if period == "Default" and len(chart_data) > 50:
+        # Sample data points evenly across the time range
+        indices = np.linspace(0, len(chart_data) - 1, 50, dtype=int)
+        chart_data = chart_data.iloc[indices].copy()
+    
     return chart_data
 
 
@@ -449,7 +468,7 @@ def render():
                 st.markdown("</div>", unsafe_allow_html=True)
 
                 # Charts for Financial Performance
-                # Handle Default period - show only last 2 years for graphs
+                # Handle Default period - show only last 2 years for graphs only
                 period = st.session_state.cfo_filters.get("period", "Default")
                 
                 if period == "Default":
