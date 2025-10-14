@@ -90,7 +90,7 @@ def is_rag_question(question):
         "late payment",
         "guarantee",
         "reminder notice",
-        " capital requirements",
+        "capital requirements",
     ]
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in rag_keywords)
