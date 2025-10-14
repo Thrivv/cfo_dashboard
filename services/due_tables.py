@@ -15,8 +15,8 @@ def generate_due_tables():
     today = datetime.now()
 
     # Load AR and AP
-    ar_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
-    ap_df = pd.read_csv("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
+    ar_df = pd.read_csv("data/AR_Invoice.csv")
+    ap_df = pd.read_csv("data/AP_Invoice.csv")
 
     # --- Normalize column names (strip spaces) ---
     ar_df.columns = [c.strip() for c in ar_df.columns]

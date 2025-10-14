@@ -1,0 +1,66 @@
+service:
+  host: 0.0.0.0
+  port: 6333
+  grpc_port: 6334
+
+storage:
+  # Path to the storage directory
+  storage_path: ./storage
+
+  # Performance settings
+  performance:
+    max_search_requests: 100
+    max_optimization_threads: 2
+
+  # WAL settings
+  wal:
+    wal_capacity_mb: 32
+    wal_segments_ahead: 0
+
+  # Snapshot settings
+  snapshots:
+    snapshots_path: ./snapshots
+
+  # On-disk storage settings
+  on_disk_payload: false
+
+  # Vector settings
+  vectors:
+    # Default vector configuration
+    size: 384
+    distance: Cosine
+
+  # Indexing settings
+  hnsw_config:
+    m: 16
+    ef_construct: 100
+    full_scan_threshold: 10000
+
+  # Optimizer settings
+  optimizers_config:
+    default_segment_number: 2
+    max_segment_size_kb: 200000
+    memmap_threshold_kb: 50000
+    indexing_threshold: 20000
+    payload_indexing_threshold: 10000
+    flush_interval_sec: 5
+    max_optimization_threads: 2
+
+  # Quantization settings
+  quantization:
+    # Disable quantization by default
+    disabled: true
+
+  # Shard settings
+  shard_number: 1
+  replication_factor: 1
+
+# Cluster settings
+cluster:
+  enabled: false
+
+# Telemetry settings
+telemetry_disabled: true
+
+# Logging settings
+log_level: INFO
