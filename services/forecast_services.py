@@ -39,6 +39,7 @@ def run_forecast_job(prompt, sampling_params=None):
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 class ForecastPreviewService:
     """Service for generating forecast previews for homepage."""
 
