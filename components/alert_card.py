@@ -305,8 +305,16 @@ def _render_llm_response():
         )
 
         if selected_alert:
+            # Check if already processing to prevent duplicate API calls
+            if st.session_state.get("processing_question", False):
+                st.info("Already processing a question. Please wait...")
+                return
+                
             with st.spinner("KraYa analyzing..."):
                 try:
+                    # Set processing flag to prevent duplicate calls
+                    st.session_state.processing_question = True
+                    
                     from services.chat_services import process_financial_question
 
                     llm_response = process_financial_question(
@@ -354,6 +362,9 @@ def _render_llm_response():
                 except Exception as e:
                     st.error(f"Error getting response: {str(e)}")
                     st.info("Please try again or check the AI service connection.")
+                finally:
+                    # Clear processing flag
+                    st.session_state.processing_question = False
         else:
             st.markdown(
                 """

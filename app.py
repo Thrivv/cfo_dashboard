@@ -25,7 +25,10 @@ def main():
     init_session_state()
 
     current_page = render_sidebar()
-    render_header()
+    
+    # Render header for all pages except AI Assistant
+    if current_page != "AI Assistant":
+        render_header()
 
     if current_page == "CFO Dashboard":
         CFO_Dashboard.render()

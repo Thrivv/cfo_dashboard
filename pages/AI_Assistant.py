@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from services.chat_services import process_financial_question
+from services.chat_services import process_financial_question, is_table_response
 from services.forecast_services import create_forecast_chart, run_forecast_job
 from services.query_doc import query_documents
 from utils import get_data_loader, save_chat_message
@@ -15,6 +15,10 @@ def suggest_questions():
         "What are our revenue trends?",
         "What is our profit margin?",
         "What are our operational efficiency metrics?",
+        # FINANCIAL COMPARISON - Table-based Analysis
+        "Compare revenue vs expenses by quarter",
+        "Show me profit margin trends over time",
+        "Compare our performance across departments",
         # "Show me our financial performance summary",
         # "What are our key financial KPIs?",
         # "Analyze our working capital",
@@ -202,44 +206,70 @@ def render():
         unsafe_allow_html=True,
     )
 
-    col_main, col_side = st.columns([2.2, 1])
-    with col_main:
-        chat_container = st.container()
-        with chat_container:
-            if st.session_state.ai_chat_history:
-                st.markdown('<div class="chat-box">', unsafe_allow_html=True)
-                for idx, chat_item in enumerate(st.session_state.ai_chat_history):
-                    # Handle chat format (question, answer)
-                    if len(chat_item) >= 2:
-                        question, answer = chat_item[0], chat_item[1]
-                    else:
-                        continue
+    # Sidebar for Quick questions and Status
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### Quick Questions")
+        
+        if st.session_state.get("processing_question", False):
+            st.info("Processing your question...")
 
-                    user_msg = f"You ➠ {question}"
-                    st.markdown(
-                        f"<div class='msg msg-user'>{user_msg}</div>",
-                        unsafe_allow_html=True,
-                    )
+        questions = suggest_questions()
+        for idx, question in enumerate(questions):
+            button_key = f"quick_btn_{idx}"
+            button_disabled = st.session_state.get("processing_question", False)
 
-                    # Determine service type for display
-                    if is_forecast_question(question):
-                        service_type = "Forecasting Service"
-                    elif is_rag_question(question):
-                        service_type = "Document Analysis (RAG)"
-                    else:
-                        service_type = "Financial Analysis"
+            if st.button(
+                question,
+                key=button_key,
+                use_container_width=True,
+                disabled=button_disabled,
+            ):
+                handle_question_processing(question, data)
 
-                    # Handle response format (could be string or dict with forecast data)
-                    if isinstance(answer, dict):
-                        response_text = answer["text"]
-                        forecast_data = answer.get("forecast_data")
-                        forecast_department = answer.get("forecast_department")
-                    else:
-                        response_text = answer
-                        forecast_data = None
-                        forecast_department = None
+    # Main chat area - now full width
+    chat_container = st.container()
+    with chat_container:
+        if st.session_state.ai_chat_history:
+            st.markdown('<div class="chat-box">', unsafe_allow_html=True)
+            for idx, chat_item in enumerate(st.session_state.ai_chat_history):
+                # Handle chat format (question, answer)
+                if len(chat_item) >= 2:
+                    question, answer = chat_item[0], chat_item[1]
+                else:
+                    continue
 
-                    # Display AI response with service type
+                user_msg = f"You ➠ {question}"
+                st.markdown(
+                    f"<div class='msg msg-user'>{user_msg}</div>",
+                    unsafe_allow_html=True,
+                )
+
+                # Determine service type for display
+                if is_forecast_question(question):
+                    service_type = "Forecasting Service"
+                elif is_rag_question(question):
+                    service_type = "Document Analysis (RAG)"
+                else:
+                    service_type = "Financial Analysis"
+
+                # Handle response format (could be string or dict with forecast data)
+                if isinstance(answer, dict):
+                    response_text = answer["text"]
+                    forecast_data = answer.get("forecast_data")
+                    forecast_department = answer.get("forecast_department")
+                else:
+                    response_text = answer
+                    forecast_data = None
+                    forecast_department = None
+
+                # Check if response contains markdown tables
+                if is_table_response(response_text):
+                    # For responses with tables, render as markdown
+                    st.markdown(f"**Krayra ⤵ ({service_type})**")
+                    st.markdown(response_text)
+                else:
+                    # For other responses, use HTML formatting
                     ai_msg = f"Krayra ⤵ ({service_type})<br/>{response_text}"
 
                     # Add forecast insights to the main message if available
@@ -259,84 +289,46 @@ def render():
                         unsafe_allow_html=True,
                     )
 
-                    # Show forecast chart if available
-                    if "Forecast Generated" in response_text and forecast_data:
-                        # Display forecast chart
-                        create_forecast_chart(
-                            forecast_data, forecast_department, chart_height=200
-                        )
+                # Show forecast chart if available
+                if "Forecast Generated" in response_text and forecast_data:
+                    # Display forecast chart
+                    create_forecast_chart(
+                        forecast_data, forecast_department, chart_height=200
+                    )
 
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    '<div class="chat-box empty"></div>', unsafe_allow_html=True
-                )
-
-        # Use form for Enter key support
-        with st.form(key="question_form", clear_on_submit=True):
-            user_question = st.text_area(
-                "Your question",
-                height=72,
-                placeholder="Ask about financial metrics, forecasts, invoices, regulations, or business performance...",
-                key="ai_question_input",
-                label_visibility="collapsed",
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(
+                '<div class="chat-box empty"></div>', unsafe_allow_html=True
             )
 
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                submitted = st.form_submit_button(
-                    "Ask TO KraYa",
-                    type="primary",
-                    disabled=st.session_state.get("processing_question", False),
-                )
-            with col2:
-                clear_clicked = st.form_submit_button(
-                    "Clear", disabled=st.session_state.get("processing_question", False)
-                )
+    # Use form for Enter key support
+    with st.form(key="question_form", clear_on_submit=True):
+        user_question = st.text_area(
+            "Your question",
+            height=72,
+            placeholder="Ask about financial metrics, forecasts, invoices, regulations, or business performance...",
+            key="ai_question_input",
+            label_visibility="collapsed",
+        )
 
-        # Handle form submission
-        if submitted and user_question.strip():
-            handle_question_processing(user_question, data)
-        elif clear_clicked:
-            st.session_state.ai_chat_history = []
-            st.session_state.processing_question = False
-            # Clear the session state and let the page naturally refresh
-            st.rerun()
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            submitted = st.form_submit_button(
+                "Ask TO KraYa",
+                type="primary",
+                disabled=st.session_state.get("processing_question", False),
+            )
+        with col2:
+            clear_clicked = st.form_submit_button(
+                "Clear", disabled=st.session_state.get("processing_question", False)
+            )
 
-        # Define button_disabled for quick questions
-        button_disabled = st.session_state.get("processing_question", False)
-
-    with col_side:
-        with st.expander("Quick questions", expanded=True):
-            if st.session_state.get("processing_question", False):
-                st.info("Processing your question...")
-
-            questions = suggest_questions()
-            for idx, question in enumerate(questions):
-                button_key = f"quick_btn_{idx}"
-
-                if st.button(
-                    question,
-                    key=button_key,
-                    use_container_width=True,
-                    disabled=button_disabled,
-                ):
-                    handle_question_processing(question, data)
-
-        with st.expander("CFO Data Status", expanded=True):
-            if data is not None:
-                st.success("CFO dashboard data active")
-                st.info(f"{len(data)} financial records loaded")
-            else:
-                st.warning("CFO data unavailable")
-                st.info("ERP financial data required for analysis")
-
-                # Service Status
-                st.success("📊 Financial Analysis: Active")
-                st.success("🔮 Forecasting Service: Active")
-                st.success("📄 Document Analysis (RAG): Active")
-
-            if st.session_state.ai_chat_history:
-                st.metric(
-                    "CFO queries processed", len(st.session_state.ai_chat_history)
-                )
+    # Handle form submission
+    if submitted and user_question.strip():
+        handle_question_processing(user_question, data)
+    elif clear_clicked:
+        st.session_state.ai_chat_history = []
+        st.session_state.processing_question = False
+        # Clear the session state and let the page naturally refresh
+        st.rerun()

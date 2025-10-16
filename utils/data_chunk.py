@@ -174,58 +174,27 @@ SAMPLE DATA (first 3 records):
         if not self._chunks:
             return "No data chunks available"
 
-        # Create a more compact format for LLM
-        llm_format = f"""FINANCIAL DATASET OVERVIEW:
+        # Create a clear format for LLM with actual data
+        llm_format = f"""FINANCIAL DATA:
 Total Records: {self._total_records}
-Total Chunks: {len(self._chunks)}
-Chunk Size: {self._chunk_size} records per chunk
 
-DATASET STRUCTURE:
+ACTUAL FINANCIAL RECORDS:
 """
 
         for chunk in self._chunks:
             llm_format += f"""
 CHUNK {chunk['chunk_number']}:
 - Records: {chunk['record_count']} (Range: {chunk['start_index']}-{chunk['end_index']})
-- Key Metrics: {len(chunk['summary'].get('key_metrics', {}))} financial indicators
 - Date Range: {chunk['summary'].get('date_range', 'N/A')}
-- Sample Data: {len(chunk['data'][:2])} sample records available
 
-SAMPLE RECORDS:
+ACTUAL FINANCIAL DATA:
 """
-            # Add actual sample records
-            for i, record in enumerate(chunk["data"][:2], 1):
-                llm_format += f"Record {i}: {record}\n"
-
-        # Add aggregated summary statistics
-        llm_format += """
-
-AGGREGATED SUMMARY:
-"""
-
-        # Calculate overall statistics
-        all_metrics = {}
-        for chunk in self._chunks:
-            for metric, stats in chunk["summary"].get("key_metrics", {}).items():
-                if metric not in all_metrics:
-                    all_metrics[metric] = {
-                        "sum": 0,
-                        "count": 0,
-                        "min": float("inf"),
-                        "max": float("-inf"),
-                    }
-                all_metrics[metric]["sum"] += stats["sum"]
-                all_metrics[metric]["count"] += 1
-                all_metrics[metric]["min"] = min(
-                    all_metrics[metric]["min"], stats["min"]
-                )
-                all_metrics[metric]["max"] = max(
-                    all_metrics[metric]["max"], stats["max"]
-                )
-
-        for metric, stats in all_metrics.items():
-            if stats["count"] > 0:
-                llm_format += f"- {metric}: Total={stats['sum']:.2f}, Min={stats['min']:.2f}, Max={stats['max']:.2f}\n"
+            # Add actual records in a clear format
+            for i, record in enumerate(chunk["data"][:5], 1):
+                llm_format += f"Record {i}:\n"
+                for key, value in record.items():
+                    llm_format += f"  {key}: {value}\n"
+                llm_format += "\n"
 
         return llm_format
 
