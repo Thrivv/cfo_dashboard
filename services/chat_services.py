@@ -55,7 +55,7 @@ def run_chatbot_job(prompt):
             {
                 "prompt": prompt,
                 "application": "CFOChatbot",
-                "sampling_params": {"temperature": 0.1, "max_tokens": 100},
+                "sampling_params": {"temperature": 0.1, "max_tokens": 50},
             },
             timeout=180,  # Timeout in seconds
         )

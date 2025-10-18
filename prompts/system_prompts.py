@@ -33,14 +33,14 @@ QUESTION: {question}
 BUSINESS-FOCUSED RULES:
 1. Use ONLY actual values from SAMPLE RECORDS above
 2. ALWAYS create a markdown table with the data in each response
-3. MAXIMUM 150 WORDS TOTAL - BE CONCISE BUT COMPLETE
+3. MAXIMUM 50 WORDS TOTAL - BE CONCISE BUT COMPLETE
 4. Focus on ACTIONABLE insights for business decisions
 5. Highlight specific problems, opportunities, and recommendations
 6. Use clear business language, not technical jargon
 7. NEVER truncate sentences - complete all thoughts
-8. Create CLEAN tables with ONE value per cell - no multiple values in single cells
+8. Create CLEAN tables with ONE value per cell - Never keep multiple values in single cells
 
-RESPONSE FORMAT (150 WORDS MAX):
+RESPONSE FORMAT (50 WORDS MAX):
 - Table with actual data from sample records
 - 2-3 ACTIONABLE business insights with specific recommendations
 - Clear business conclusion with next steps

@@ -170,31 +170,81 @@ SAMPLE DATA (first 3 records):
         return llm_format
 
     def get_all_chunks_for_llm(self) -> str:
-        """Get all chunks formatted for LLM consumption (optimized for size)."""
+        """Get all chunks formatted for LLM consumption with aggregated data."""
         if not self._chunks:
             return "No data chunks available"
 
-        # Create a clear format for LLM with actual data
-        llm_format = f"""FINANCIAL DATA:
-Total Records: {self._total_records}
+        # Get raw data for aggregation
+        raw_data = self.data_loader.get_raw_data()
+        if raw_data is None or raw_data.empty:
+            return "No data available"
 
-ACTUAL FINANCIAL RECORDS:
+        # Calculate aggregated metrics by department
+        dept_metrics = raw_data.groupby('Business Unit / Department').agg({
+            'Revenue (Actual)': 'sum',
+            'Revenue (Budget / Forecast)': 'sum',
+            'Cost of Goods Sold (COGS)': 'sum',
+            'Gross Profit': 'sum',
+            'Operating Expenses (OPEX)': 'sum',
+            'EBITDA': 'sum',
+            'Net Income': 'sum',
+            'Cash Inflows': 'sum',
+            'Cash Outflows': 'sum',
+            'Net Cash Flow': 'sum',
+            'Total Assets': 'sum',
+            'Total Liabilities': 'sum',
+            'Equity': 'sum',
+            'Headcount': 'sum',
+            'Capital Expenditure (CapEx)': 'sum',
+            'Operational Expenditure (OpEx)': 'sum'
+        }).round(0)
+
+        # Calculate totals
+        total_revenue = dept_metrics['Revenue (Actual)'].sum()
+        total_records = len(raw_data)
+        date_range = f"{raw_data['Date / Period'].min()} to {raw_data['Date / Period'].max()}"
+
+        # Format for LLM
+        llm_format = f"""FINANCIAL DATA SUMMARY:
+Total Records: {total_records:,}
+Date Range: {date_range}
+Total Revenue (Actual): ${total_revenue:,.0f}
+
+DEPARTMENTAL FINANCIAL METRICS:
 """
 
-        for chunk in self._chunks:
+        # Add department metrics
+        for dept in dept_metrics.index:
+            dept_data = dept_metrics.loc[dept]
             llm_format += f"""
-CHUNK {chunk['chunk_number']}:
-- Records: {chunk['record_count']} (Range: {chunk['start_index']}-{chunk['end_index']})
-- Date Range: {chunk['summary'].get('date_range', 'N/A')}
-
-ACTUAL FINANCIAL DATA:
+{dept}:
+  Revenue (Actual): ${dept_data['Revenue (Actual)']:,.0f}
+  Revenue (Budget): ${dept_data['Revenue (Budget / Forecast)']:,.0f}
+  Gross Profit: ${dept_data['Gross Profit']:,.0f}
+  EBITDA: ${dept_data['EBITDA']:,.0f}
+  Net Income: ${dept_data['Net Income']:,.0f}
+  Cash Inflows: ${dept_data['Cash Inflows']:,.0f}
+  Cash Outflows: ${dept_data['Cash Outflows']:,.0f}
+  Net Cash Flow: ${dept_data['Net Cash Flow']:,.0f}
+  Total Assets: ${dept_data['Total Assets']:,.0f}
+  Headcount: {dept_data['Headcount']:,.0f}
+  CapEx: ${dept_data['Capital Expenditure (CapEx)']:,.0f}
+  OpEx: ${dept_data['Operational Expenditure (OpEx)']:,.0f}
 """
-            # Add actual records in a clear format
-            for i, record in enumerate(chunk["data"][:5], 1):
-                llm_format += f"Record {i}:\n"
-                for key, value in record.items():
-                    llm_format += f"  {key}: {value}\n"
-                llm_format += "\n"
+
+        # Add sample records for context (reduced to 2 per chunk)
+        llm_format += f"""
+
+SAMPLE RECORDS (for context - {len(self._chunks) * 2} out of {total_records:,} total):
+"""
+        for chunk in self._chunks:
+            llm_format += f"\nCHUNK {chunk['chunk_number']} (Records {chunk['start_index']}-{chunk['end_index']}):\n"
+            for i, record in enumerate(chunk["data"][:2], 1):  # Only 2 records per chunk
+                llm_format += f"  Sample {i}:\n"
+                llm_format += f"    Date: {record.get('Date / Period', 'N/A')}\n"
+                llm_format += f"    Department: {record.get('Business Unit / Department', 'N/A')}\n"
+                llm_format += f"    Revenue (Actual): ${record.get('Revenue (Actual)', 0):,.0f}\n"
+                llm_format += f"    Gross Profit: ${record.get('Gross Profit', 0):,.0f}\n"
 
         return llm_format
 
