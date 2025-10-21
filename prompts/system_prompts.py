@@ -92,3 +92,27 @@ def get_greeting_prompt() -> str:
     return get_system_prompt("", "hello")
 
 
+def get_question_classification_prompt(question: str) -> str:
+    """Generate prompt to classify if question is financial/business related or not.
+    
+    Args:
+        question (str): User question to classify
+        
+    Returns:
+        str: Classification prompt
+    """
+    return f"""You are a question classifier. Analyze the following question and determine if it's related to financial data, business analysis, forecasting, or company performance.
+
+QUESTION: {question}
+
+CLASSIFICATION RULES:
+- FINANCIAL/BUSINESS: Questions about revenue, profit, expenses, departments, forecasting, financial trends, business performance, company metrics, financial analysis
+- NON-FINANCIAL: Questions about general topics like machine learning, AI, programming, weather, sports, politics, entertainment, cooking, travel, health, science, history, philosophy, art, literature, education, or any topic not related to business/financial data
+
+RESPOND WITH ONLY ONE WORD:
+- "FINANCIAL" if the question is about financial data, business analysis, or company performance
+- "NON_FINANCIAL" if the question is about any other topic
+
+Your response:"""
+
+
