@@ -28,8 +28,8 @@ def format_llm_response(response_text):
         # This is likely a markdown table, return as-is for Streamlit to render
         return response_text
     else:
-        # Convert newlines to HTML breaks for regular text
-        return response_text.replace("\n", "<br/>")
+        # Return plain text without HTML formatting
+        return response_text
 
 
 def is_table_response(response_text):
@@ -55,7 +55,7 @@ def run_chatbot_job(prompt):
             {
                 "prompt": prompt,
                 "application": "CFOChatbot",
-                "sampling_params": {"temperature": 0.1, "max_tokens": 50},
+                "sampling_params": {"temperature": 0.1, "max_tokens": 200},
             },
             timeout=180,  # Timeout in seconds
         )

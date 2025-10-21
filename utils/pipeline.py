@@ -71,8 +71,8 @@ def check_and_update_data():
 
         # 2. Update invoice CSV files with the latest status
         print("🔄 Updating invoice statuses...")
-        update_invoice_status_and_save("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_new/cfo_dashboard/data/AP_Invoice.csv")
-        update_invoice_status_and_save("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_new/cfo_dashboard/data/AR_Invoice.csv")
+        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
+        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
         print("✅ Invoice statuses updated.")
 
         # 3. Ingest all data from scratch

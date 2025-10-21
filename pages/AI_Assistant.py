@@ -139,34 +139,7 @@ def extract_department(question):
     return "Unknown"
 
 
-def response_generator(response_text):
-    """Generate streaming response for better UX."""
-    for word in response_text.split():
-        yield word + " "
-        time.sleep(0.02)  # Faster than tutorial for better UX
 
-def handle_question_processing(question):
-    """Handle the complete question processing workflow."""
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": question})
-
-    try:
-        # Get response (could be text or dict with forecast data)
-        response = process_question(question)
-
-        # Save to database (text only for database)
-        if isinstance(response, dict):
-            save_chat_message(question, response["text"])
-        else:
-            save_chat_message(question, response)
-        
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        
-    except Exception as e:
-        error_msg = f"Error processing your question: {str(e)}. Please try again."
-        st.session_state.messages.append({"role": "assistant", "content": error_msg})
-        save_chat_message(question, error_msg)
 
 
 def render():
@@ -224,18 +197,6 @@ def render():
                 response_text = message["content"]["text"]
                 forecast_data = message["content"].get("forecast_data")
                 forecast_department = message["content"].get("forecast_department")
-                original_question = message["content"].get("original_question", "")
-                
-                # Determine service type
-                if is_forecast_question(original_question):
-                    service_type = "Forecasting Service"
-                elif is_rag_question(original_question):
-                    service_type = "Document Analysis (RAG)"
-                else:
-                    service_type = "Financial Analysis"
-
-                # Display service type
-                st.caption(f"🔧 {service_type}")
                 
                 # Display response content
                 if is_table_response(response_text):
@@ -254,24 +215,6 @@ def render():
             else:
                 # Handle string responses
                 response_text = message["content"]
-                
-                # Determine service type based on previous message
-                if len(st.session_state.messages) > 1:
-                    prev_msg = st.session_state.messages[-2] if message["role"] == "assistant" else None
-                    if prev_msg and prev_msg["role"] == "user":
-                        if is_forecast_question(prev_msg["content"]):
-                            service_type = "Forecasting Service"
-                        elif is_rag_question(prev_msg["content"]):
-                            service_type = "Document Analysis (RAG)"
-                        else:
-                            service_type = "Financial Analysis"
-                    else:
-                        service_type = "Financial Analysis"
-                else:
-                    service_type = "Financial Analysis"
-                
-                # Display service type
-                st.caption(f"🔧 {service_type}")
                 
                 # Display response content
                 if is_table_response(response_text):
@@ -295,17 +238,6 @@ def render():
                     # Get response
                     response = process_question(prompt)
                     
-                    # Determine service type
-                    if is_forecast_question(prompt):
-                        service_type = "Forecasting Service"
-                    elif is_rag_question(prompt):
-                        service_type = "Document Analysis (RAG)"
-                    else:
-                        service_type = "Financial Analysis"
-                    
-                    # Display service type
-                    st.caption(f"🔧 {service_type}")
-                    
                     # Handle different response types
                     if isinstance(response, dict):
                         # Forecast response
@@ -313,11 +245,11 @@ def render():
                         forecast_data = response.get("forecast_data")
                         forecast_department = response.get("forecast_department")
                         
-                        # Display response with streaming effect
+                        # Display response
                         if is_table_response(response_text):
                             st.markdown(response_text)
                         else:
-                            st.write_stream(response_generator(response_text))
+                            st.markdown(response_text)
                         
                         # Add forecast insights if available
                         if "Forecast Generated" in response_text and forecast_data:
@@ -338,7 +270,7 @@ def render():
                         if is_table_response(response):
                             st.markdown(response)
                         else:
-                            st.write_stream(response_generator(response))
+                            st.markdown(response)
                         
                         # Add to chat history
                         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -358,7 +290,6 @@ def render():
             """
             <style>
             .animate-character {
-                text-transform: uppercase;
                 background-image: linear-gradient(
                     -225deg,
                     #231557 0%,

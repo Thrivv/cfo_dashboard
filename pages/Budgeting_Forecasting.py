@@ -68,185 +68,185 @@ def render():
 
     if raw_df is not None and not raw_df.empty:
         # Page Header
-        st.markdown(
-            '<div class="panel"><div class="section-title">Revenue Forecasting</div>',
-            unsafe_allow_html=True,
-        )
+        # st.markdown(
+        #     '<div class="panel"><div class="section-title">Revenue Forecasting</div>',
+        #     unsafe_allow_html=True,
+        # )
 
         # Department selection for all charts
-        departments = [
-            "Finance",
-            "Sales",
-            "Marketing",
-            "IT",
-            "HR",
-            "Operations",
-            "All Departments",
-        ]
-        selected_dept = st.selectbox(
-            "Select Department for Analysis", departments, key="main_dept_selector"
-        )
+        # departments = [
+        #     "Finance",
+        #     "Sales",
+        #     "Marketing",
+        #     "IT",
+        #     "HR",
+        #     "Operations",
+        #     "All Departments",
+        # ]
+        # selected_dept = st.selectbox(
+        #     "Select Department for Analysis", departments, key="main_dept_selector"
+        # )
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        # st.markdown("</div>", unsafe_allow_html=True)
 
         # Two Column Layout for Charts
-        col1, col2 = st.columns(2)
+        # col1, col2 = st.columns(2)
 
-        with col1:
-            # Department Spend Analysis - Text and Metrics
-            st.markdown(
-                '<div class="chart-container"><div class="section-title">Department Spend Analysis</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                "**Purpose:** Track department spending patterns and forecast future expenses using 2 years historical data.<br/>**Insight:** Compare spending trends across departments and predict budget requirements for better resource allocation.",
-                unsafe_allow_html=True,
-            )
+        # with col1:
+        #     # Department Spend Analysis - Text and Metrics
+        #     st.markdown(
+        #         '<div class="chart-container"><div class="section-title">Department Spend Analysis</div>',
+        #         unsafe_allow_html=True,
+        #     )
+        #     st.markdown(
+        #         "**Purpose:** Track department spending patterns and forecast future expenses using 2 years historical data.<br/>**Insight:** Compare spending trends across departments and predict budget requirements for better resource allocation.",
+        #         unsafe_allow_html=True,
+        #     )
 
-            if selected_dept != "All Departments":
-                dept_data = raw_df[
-                    raw_df["Business Unit / Department"] == selected_dept
-                ]
-                if not dept_data.empty:
-                    # Calculate department spend metrics
-                    latest = dept_data.iloc[-1]
-                    opex = latest.get("Operating Expenses (OPEX)", 0)
-                    cogs = latest.get("Cost of Goods Sold (COGS)", 0)
-                    total_spend = opex + cogs
+        #     if selected_dept != "All Departments":
+        #         dept_data = raw_df[
+        #             raw_df["Business Unit / Department"] == selected_dept
+        #         ]
+        #         if not dept_data.empty:
+        #             # Calculate department spend metrics
+        #             latest = dept_data.iloc[-1]
+        #             opex = latest.get("Operating Expenses (OPEX)", 0)
+        #             cogs = latest.get("Cost of Goods Sold (COGS)", 0)
+        #             total_spend = opex + cogs
 
-                    # Simple trend calculation
-                    if len(dept_data) > 1:
-                        prev = dept_data.iloc[-2]
-                        prev_spend = prev.get(
-                            "Operating Expenses (OPEX)", 0
-                        ) + prev.get("Cost of Goods Sold (COGS)", 0)
-                        spend_trend = (
-                            (total_spend - prev_spend) / max(prev_spend, 1)
-                        ) * 100
-                    else:
-                        spend_trend = 0
+        #             # Simple trend calculation
+        #             if len(dept_data) > 1:
+        #                 prev = dept_data.iloc[-2]
+        #                 prev_spend = prev.get(
+        #                     "Operating Expenses (OPEX)", 0
+        #                 ) + prev.get("Cost of Goods Sold (COGS)", 0)
+        #                 spend_trend = (
+        #                     (total_spend - prev_spend) / max(prev_spend, 1)
+        #                 ) * 100
+        #             else:
+        #                 spend_trend = 0
 
-                    # Display metrics in compact format
-                    metric_col1, metric_col2 = st.columns(2)
-                    with metric_col1:
-                        st.metric(
-                            "Total Spend",
-                            f"${total_spend:,.0f}",
-                            f"{spend_trend:+.1f}%",
-                        )
-                    with metric_col2:
-                        st.metric("OPEX", f"${opex:,.0f}")
-                else:
-                    st.warning(f"No data available for {selected_dept} department.")
-            else:
-                # All departments analysis
-                dept_spend = (
-                    raw_df.groupby("Business Unit / Department")
-                    .agg(
-                        {
-                            "Operating Expenses (OPEX)": "sum",
-                            "Cost of Goods Sold (COGS)": "sum",
-                        }
-                    )
-                    .reset_index()
-                )
+        #             # Display metrics in compact format
+        #             metric_col1, metric_col2 = st.columns(2)
+        #             with metric_col1:
+        #                 st.metric(
+        #                     "Total Spend",
+        #                     f"${total_spend:,.0f}",
+        #                     f"{spend_trend:+.1f}%",
+        #                 )
+        #             with metric_col2:
+        #                 st.metric("OPEX", f"${opex:,.0f}")
+        #         else:
+        #             st.warning(f"No data available for {selected_dept} department.")
+        #     else:
+        #         # All departments analysis
+        #         dept_spend = (
+        #             raw_df.groupby("Business Unit / Department")
+        #             .agg(
+        #                 {
+        #                     "Operating Expenses (OPEX)": "sum",
+        #                     "Cost of Goods Sold (COGS)": "sum",
+        #                 }
+        #             )
+        #             .reset_index()
+        #         )
 
-                dept_spend["Total Spend"] = (
-                    dept_spend["Operating Expenses (OPEX)"]
-                    + dept_spend["Cost of Goods Sold (COGS)"]
-                )
+        #         dept_spend["Total Spend"] = (
+        #             dept_spend["Operating Expenses (OPEX)"]
+        #             + dept_spend["Cost of Goods Sold (COGS)"]
+        #         )
 
-                # Display summary metrics
-                total_all_spend = dept_spend["Total Spend"].sum()
-                st.metric("Total Company Spend", f"${total_all_spend:,.0f}")
-                st.metric("Departments", f"{len(dept_spend)}")
+        #         # Display summary metrics
+        #         total_all_spend = dept_spend["Total Spend"].sum()
+        #         st.metric("Total Company Spend", f"${total_all_spend:,.0f}")
+        #         st.metric("Departments", f"{len(dept_spend)}")
 
-            st.markdown("</div>", unsafe_allow_html=True)
+        #     st.markdown("</div>", unsafe_allow_html=True)
 
-        with col2:
-            # Department Spend Analysis - Chart
-            if selected_dept != "All Departments":
-                dept_data = raw_df[
-                    raw_df["Business Unit / Department"] == selected_dept
-                ]
-                if not dept_data.empty and len(dept_data) >= 3:
-                    spend_history = (
-                        dept_data["Operating Expenses (OPEX)"].tail(12).values
-                    )
-                    dates = pd.date_range(
-                        end=datetime.now(), periods=len(spend_history), freq="ME"
-                    )
+        # with col2:
+        #     # Department Spend Analysis - Chart
+        #     if selected_dept != "All Departments":
+        #         dept_data = raw_df[
+        #             raw_df["Business Unit / Department"] == selected_dept
+        #         ]
+        #         if not dept_data.empty and len(dept_data) >= 3:
+        #             spend_history = (
+        #                 dept_data["Operating Expenses (OPEX)"].tail(12).values
+        #             )
+        #             dates = pd.date_range(
+        #                 end=datetime.now(), periods=len(spend_history), freq="ME"
+        #             )
 
-                    # Simple linear forecast
-                    import numpy as np
+        #             # Simple linear forecast
+        #             import numpy as np
 
-                    x = np.arange(len(spend_history))
-                    coeffs = np.polyfit(x, spend_history, 1)
-                    forecast_periods = np.arange(
-                        len(spend_history), len(spend_history) + 3
-                    )
-                    forecast_values = np.polyval(coeffs, forecast_periods)
+        #             x = np.arange(len(spend_history))
+        #             coeffs = np.polyfit(x, spend_history, 1)
+        #             forecast_periods = np.arange(
+        #                 len(spend_history), len(spend_history) + 3
+        #             )
+        #             forecast_values = np.polyval(coeffs, forecast_periods)
 
-                    # Create chart
-                    fig = go.Figure()
-                    fig.add_trace(
-                        go.Scatter(
-                            x=dates,
-                            y=spend_history,
-                            mode="lines+markers",
-                            name="Historical",
-                            line=dict(color="#3498db"),
-                        )
-                    )
+        #             # Create chart
+        #             fig = go.Figure()
+        #             fig.add_trace(
+        #                 go.Scatter(
+        #                     x=dates,
+        #                     y=spend_history,
+        #                     mode="lines+markers",
+        #                     name="Historical",
+        #                     line=dict(color="#3498db"),
+        #                 )
+        #             )
 
-                    forecast_dates = pd.date_range(
-                        start=dates[-1] + timedelta(days=30), periods=3, freq="ME"
-                    )
-                    fig.add_trace(
-                        go.Scatter(
-                            x=forecast_dates,
-                            y=forecast_values,
-                            mode="lines+markers",
-                            name="Forecast",
-                            line=dict(color="#e74c3c", dash="dash"),
-                        )
-                    )
+        #             forecast_dates = pd.date_range(
+        #                 start=dates[-1] + timedelta(days=30), periods=3, freq="ME"
+        #             )
+        #             fig.add_trace(
+        #                 go.Scatter(
+        #                     x=forecast_dates,
+        #                     y=forecast_values,
+        #                     mode="lines+markers",
+        #                     name="Forecast",
+        #                     line=dict(color="#e74c3c", dash="dash"),
+        #                 )
+        #             )
 
-                    fig = _apply_plot_theme(
-                        fig, height=300, title=f"{selected_dept} Spend Forecast"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-            else:
-                # All departments analysis chart
-                dept_spend = (
-                    raw_df.groupby("Business Unit / Department")
-                    .agg(
-                        {
-                            "Operating Expenses (OPEX)": "sum",
-                            "Cost of Goods Sold (COGS)": "sum",
-                        }
-                    )
-                    .reset_index()
-                )
+        #             fig = _apply_plot_theme(
+        #                 fig, height=300, title=f"{selected_dept} Spend Forecast"
+        #             )
+        #             st.plotly_chart(fig, use_container_width=True)
+        #     else:
+        #         # All departments analysis chart
+        #         dept_spend = (
+        #             raw_df.groupby("Business Unit / Department")
+        #             .agg(
+        #                 {
+        #                     "Operating Expenses (OPEX)": "sum",
+        #                     "Cost of Goods Sold (COGS)": "sum",
+        #                 }
+        #             )
+        #             .reset_index()
+        #         )
 
-                dept_spend["Total Spend"] = (
-                    dept_spend["Operating Expenses (OPEX)"]
-                    + dept_spend["Cost of Goods Sold (COGS)"]
-                )
+        #         dept_spend["Total Spend"] = (
+        #             dept_spend["Operating Expenses (OPEX)"]
+        #             + dept_spend["Cost of Goods Sold (COGS)"]
+        #         )
 
-                # Department spend comparison chart
-                fig = px.bar(
-                    dept_spend,
-                    x="Business Unit / Department",
-                    y="Total Spend",
-                    title="Total Spend by Department",
-                    color="Total Spend",
-                    color_continuous_scale="Viridis",
-                )
-                fig = _apply_plot_theme(
-                    fig, height=300, title="Department Spend Comparison"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+        #         # Department spend comparison chart
+        #         fig = px.bar(
+        #             dept_spend,
+        #             x="Business Unit / Department",
+        #             y="Total Spend",
+        #             title="Total Spend by Department",
+        #             color="Total Spend",
+        #             color_continuous_scale="Viridis",
+        #         )
+        #         fig = _apply_plot_theme(
+        #             fig, height=300, title="Department Spend Comparison"
+        #         )
+        #         st.plotly_chart(fig, use_container_width=True)
 
         # AI Forecasting Section - Full Width
         st.markdown(
@@ -345,7 +345,7 @@ def render():
                 ),  # Convert to Timestamp for graph_services
             )
             if fig:
-                st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info(
                     "No chartable forecast data found for the selected display range."
