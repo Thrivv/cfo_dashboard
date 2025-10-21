@@ -3,13 +3,13 @@
 from datetime import datetime, timedelta
 import json
 import os
-import subprocess
 import uuid
 
 import pandas as pd
 from qdrant_client.models import PointStruct
 
 from utils.chunker import chunk_text
+from utils.clear_data import clear_all_qdrant, clear_all_redis
 from utils.embedding import embed_texts
 from utils.llm_client import call_vllm
 
@@ -24,7 +24,6 @@ def update_invoice_status_and_save(file_path: str):
     """Reads a CSV file, adds/updates a 'Status' column, and saves it."""
     df = pd.read_csv(file_path)
     today = datetime.now().date()
-    next_week = today + timedelta(days=7)
 
     def get_status(row):
         due_date = pd.to_datetime(row["Due Date"]).date()
@@ -32,13 +31,15 @@ def update_invoice_status_and_save(file_path: str):
 
         if payment_status == "paid":
             return "paid"
-        if due_date < today and payment_status != "paid":
-            return "overdue"
-        if today <= due_date <= next_week:
-            return "upcoming"
-        if due_date > next_week:
-            return "future"
-        return "unknown"
+
+        delta = (due_date - today).days
+
+        if delta < 0:
+            return f"overdue ({abs(delta)} days ago)"
+        elif 0 <= delta <= 7:
+            return f"upcoming ({delta} days remaining)"
+        else:
+            return f"future ({delta} days remaining)"
 
     df["Status"] = df.apply(get_status, axis=1)
     df.to_csv(file_path, index=False)
@@ -48,6 +49,9 @@ def check_and_update_data():
     """
     Checks the last update date and runs the clearing and ingestion scripts if a new day has started.
     """
+    # Import here to avoid circular dependency
+    from utils.ingest import ingest_all_data
+
     date_cache_file = "data/last_update_date.txt"
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -59,21 +63,27 @@ def check_and_update_data():
     if last_update_date != today_str:
         print("🚀 New day detected. Clearing old data and ingesting fresh data...")
 
-        # Clear all data
-        subprocess.run(["python3", "utils/clear_data.py"], input="YES\n", text=True, check=True)
+        # 1. Clear all existing data from Qdrant and Redis
+        print("🧹 Clearing Qdrant and Redis data...")
+        clear_all_qdrant()
+        clear_all_redis()
+        print("✅ Caches, vectors, and metadata wiped clean.")
 
-        # Update CSV files
-        update_invoice_status_and_save("data/AP_Invoice.csv")
-        update_invoice_status_and_save("data/AR_Invoice.csv")
+        # 2. Update invoice CSV files with the latest status
+        print("🔄 Updating invoice statuses...")
+        update_invoice_status_and_save("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_new/cfo_dashboard/data/AP_Invoice.csv")
+        update_invoice_status_and_save("/home/rohith/Git_Thrivv/Git_Use_Thrivv/cfo_new/cfo_dashboard/data/AR_Invoice.csv")
+        print("✅ Invoice statuses updated.")
 
-        # Ingest new data
-        subprocess.run(["python3", "utils/ingest.py"], check=True)
+        # 3. Ingest all data from scratch
+        print("🚚 Ingesting fresh data...")
+        ingest_all_data()
 
-        # Update the date cache
+        # 4. Update the date cache to prevent re-running today
         with open(date_cache_file, "w") as f:
             f.write(today_str)
-        
-        print("✅ Data refresh complete.")
+
+        print("✅ Data refresh complete for today.")
     else:
         print("ℹ️ Data is already up-to-date for today.")
 

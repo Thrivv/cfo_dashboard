@@ -52,7 +52,7 @@ def ingest_csv_to_qdrant_enhanced(
                 f"Invoice record: Invoice No. {row['Invoice No.']}, issued on {row['Invoice Date']}, "
                 f"from {name} for {row['Service Description']}. "
                 f"The amount is {row['Amount (AED)']} AED. "
-                f"The payment status is '{row['Payment Status']}' and the due date was '{row['Due Date']}'."
+                f"The payment status is '{row['Payment Status']}' and the due date was '{row['Due Date']}'and status '{row['Status']}'."
             )
 
             embedding = embedding_model.encode(text_chunk).tolist()
@@ -83,7 +83,9 @@ def ingest_csv_to_qdrant_enhanced(
         print(f"An error occurred during ingestion for {file_path}: {e}")
 
 
-if __name__ == "__main__":
+def ingest_all_data():
+    """Initializes clients and ingests all data sources."""
+
     # Initialize Qdrant client and embedding model
     qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     embedding_model = SentenceTransformer(EMBEDDING_MODEL)
@@ -113,3 +115,7 @@ if __name__ == "__main__":
     po_tc_metadata = {"doc_name": "PO_T&C.pdf", "source_type": "terms_and_conditions"}
     ingest_document(po_tc_path, po_tc_metadata)
     print("✅ PO T&C PDF ingested")
+
+
+if __name__ == "__main__":
+    ingest_all_data()
