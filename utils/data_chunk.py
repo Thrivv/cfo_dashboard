@@ -232,19 +232,32 @@ DEPARTMENTAL FINANCIAL METRICS:
   OpEx: ${dept_data['Operational Expenditure (OpEx)']:,.0f}
 """
 
-        # Add sample records for context (reduced to 2 per chunk)
+        # Add complete historical data by year
         llm_format += f"""
 
-SAMPLE RECORDS (for context - {len(self._chunks) * 2} out of {total_records:,} total):
+COMPLETE HISTORICAL DATA BY YEAR:
 """
-        for chunk in self._chunks:
-            llm_format += f"\nCHUNK {chunk['chunk_number']} (Records {chunk['start_index']}-{chunk['end_index']}):\n"
-            for i, record in enumerate(chunk["data"][:2], 1):  # Only 2 records per chunk
-                llm_format += f"  Sample {i}:\n"
-                llm_format += f"    Date: {record.get('Date / Period', 'N/A')}\n"
-                llm_format += f"    Department: {record.get('Business Unit / Department', 'N/A')}\n"
-                llm_format += f"    Revenue (Actual): ${record.get('Revenue (Actual)', 0):,.0f}\n"
-                llm_format += f"    Gross Profit: ${record.get('Gross Profit', 0):,.0f}\n"
+        
+        # Group by year and show all years
+        raw_data['Year'] = pd.to_datetime(raw_data['Date / Period']).dt.year
+        yearly_data = raw_data.groupby(['Year', 'Business Unit / Department']).agg({
+            'Revenue (Actual)': 'sum',
+            'Revenue (Budget / Forecast)': 'sum',
+            'Gross Profit': 'sum',
+            'Net Income': 'sum'
+        }).round(0)
+        
+        # Show data for each year
+        for year in sorted(raw_data['Year'].unique()):
+            year_data = yearly_data.loc[year]
+            llm_format += f"\nYEAR {year}:\n"
+            for dept in year_data.index:
+                dept_data = year_data.loc[dept]
+                llm_format += f"  {dept}:\n"
+                llm_format += f"    Revenue (Actual): ${dept_data['Revenue (Actual)']:,.0f}\n"
+                llm_format += f"    Revenue (Budget): ${dept_data['Revenue (Budget / Forecast)']:,.0f}\n"
+                llm_format += f"    Gross Profit: ${dept_data['Gross Profit']:,.0f}\n"
+                llm_format += f"    Net Income: ${dept_data['Net Income']:,.0f}\n"
 
         return llm_format
 

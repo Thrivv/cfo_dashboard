@@ -50,6 +50,33 @@ def render():
         label="Account Receivable", value=f"{summary_data['ar_total']:,} AED"
     )
 
+    # ===============================
+    # Append Due Tables
+    # ===============================
+    st.subheader("📊 Upcoming Accounts Payable / Receivable Insights")
+    try:
+        ap_due_df = due_data.get("AP_Due")
+        ar_due_df = due_data.get("AR_Due")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Account Payables Due")
+            if ap_due_df is not None and not ap_due_df.empty:
+                st.dataframe(ap_due_df)
+            else:
+                st.info("No upcoming Account Payable invoices.")
+
+        with col2:
+            st.subheader("Account Receivables Due")
+            if ar_due_df is not None and not ar_due_df.empty:
+                st.dataframe(ar_due_df)
+            else:
+                st.info("No upcoming Account Receivable invoices.")
+    except Exception as e:
+        st.error(f"An error occurred while generating AP/AR tables: {e}")
+
+
+    st.subheader("📊 Accounts Payable / Receivable Analysis")
     try:
         # Top section with risk score and invoice summary
         col1, col2 = st.columns(2)
@@ -69,8 +96,8 @@ def render():
                 f"High risk of Account Payable payment delays detected in {risk_data_ap['high_risk_count']} invoices totalling {risk_data_ap['high_risk_total']:.2f} AED"
             )
 
-            if st.button("View Risk AP Invoices"):
-                st.dataframe(view_risk_invoices(risk_data_ap["high_risk_invoices"]))
+            st.subheader("Overdue High-Risk Payable Invoices")
+            st.dataframe(view_risk_invoices(risk_data_ap["high_risk_invoices"]))
 
         with col2:
             st.subheader("AR Payment Delay Risk Score")
@@ -88,36 +115,13 @@ def render():
                 f"High risk of Account Receivable payment delays detected in {risk_data_ar['high_risk_count']} invoices totalling {risk_data_ar['high_risk_total']:.2f} AED"
             )
 
-            if st.button("View Risk AR Invoices"):
-                st.dataframe(view_risk_invoices(risk_data_ar["high_risk_invoices"]))
+            st.subheader("Overdue High-Risk Receivable Invoices")
+            st.dataframe(view_risk_invoices(risk_data_ar["high_risk_invoices"]))
+
 
     except Exception as e:
         st.error(f"An error occurred while generating AP/AR tables: {e}")
 
-    # ===============================
-    # Append Due Tables
-    # ===============================
-    st.subheader("📊 Upcoming Accounts Payable / Receivable Insights")
-    try:
-        ap_due_df = due_data.get("AP_Due")
-        ar_due_df = due_data.get("AR_Due")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Account Payables Due")
-            if ap_due_df is not None and not ap_due_df.empty:
-                st.dataframe(ap_due_df)
-            else:
-                st.info("No Account Payables data available.")
-
-        with col2:
-            st.subheader("Account Receivables Due")
-            if ar_due_df is not None and not ar_due_df.empty:
-                st.dataframe(ar_due_df)
-            else:
-                st.info("No Account Receivables data available.")
-    except Exception as e:
-        st.error(f"An error occurred while generating AP/AR tables: {e}")
 
     # ===============================
     # Opportunities/Warnings from insight.py

@@ -2,12 +2,14 @@
 
 from datetime import datetime, timedelta
 import json
+import os
 import uuid
 
 import pandas as pd
 from qdrant_client.models import PointStruct
 
 from utils.chunker import chunk_text
+from utils.clear_data import clear_all_qdrant, clear_all_redis
 from utils.embedding import embed_texts
 from utils.llm_client import call_vllm
 
@@ -16,6 +18,74 @@ from utils.parser import parse_csv, parse_pdf
 from utils.redis_client import get_metadata, store_metadata
 from utils.rerank import rerank
 from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
+
+
+def update_invoice_status_and_save(file_path: str):
+    """Reads a CSV file, adds/updates a 'Status' column, and saves it."""
+    df = pd.read_csv(file_path)
+    today = datetime.now().date()
+
+    def get_status(row):
+        due_date = pd.to_datetime(row["Due Date"]).date()
+        payment_status = str(row["Payment Status"]).lower().strip()
+
+        if payment_status == "paid":
+            return "paid"
+
+        delta = (due_date - today).days
+
+        if delta < 0:
+            return f"overdue ({abs(delta)} days ago)"
+        elif 0 <= delta <= 7:
+            return f"upcoming ({delta} days remaining)"
+        else:
+            return f"future ({delta} days remaining)"
+
+    df["Status"] = df.apply(get_status, axis=1)
+    df.to_csv(file_path, index=False)
+
+
+def check_and_update_data():
+    """
+    Checks the last update date and runs the clearing and ingestion scripts if a new day has started.
+    """
+    # Import here to avoid circular dependency
+    from utils.ingest import ingest_all_data
+
+    date_cache_file = "data/last_update_date.txt"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    last_update_date = ""
+    if os.path.exists(date_cache_file):
+        with open(date_cache_file, "r") as f:
+            last_update_date = f.read().strip()
+
+    if last_update_date != today_str:
+        print("🚀 New day detected. Clearing old data and ingesting fresh data...")
+
+        # 1. Clear all existing data from Qdrant and Redis
+        print("🧹 Clearing Qdrant and Redis data...")
+        clear_all_qdrant()
+        clear_all_redis()
+        print("✅ Caches, vectors, and metadata wiped clean.")
+
+        # 2. Update invoice CSV files with the latest status
+        print("🔄 Updating invoice statuses...")
+        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
+        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+        print("✅ Invoice statuses updated.")
+
+        # 3. Ingest all data from scratch
+        print("🚚 Ingesting fresh data...")
+        ingest_all_data()
+
+        # 4. Update the date cache to prevent re-running today
+        with open(date_cache_file, "w") as f:
+            f.write(today_str)
+
+        print("✅ Data refresh complete for today.")
+    else:
+        print("ℹ️ Data is already up-to-date for today.")
 
 
 # -------- Template Loader --------
@@ -56,6 +126,9 @@ def ingest_document(path: str, metadata: dict):
 # -------- Query Pipeline (Unified RAG + Invoice Logic) --------
 def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     """Main RAG query pipeline with intelligent invoice filtering and context composition."""
+    # Check and update data at the beginning of the pipeline
+    check_and_update_data()
+
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
     results = search(q_vec, top_k=top_k)
