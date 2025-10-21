@@ -1,26 +1,26 @@
-Invoice No.,Invoice Date,Due Date,Customer Name,Service Description,Amount (AED),Payment Status,VAT TRN,VAT %,Paid Date,Notes
-INV-1001,2025-07-05,2025-09-10,Alpha Trading LLC,IT Consulting Services,12500,Paid,TRN12345,5,2025-09-09,
-INV-1003,2025-07-12,2025-09-15,Orion Logistics LLC,Freight Forwarding,45200,Paid,TRN34567,5,2025-9-02,
-INV-1005,2025-07-18,2025-10-08,Zenith Constructions,Civil Works,15600,Not paid,TRN56789,5,,
-INV-1007,2025-07-22,2025-09-20,Alpha Trading LLC,Software License Renewal,17400,Paid,TRN12345,5,2025-09-19,
-INV-1009,2025-07-28,2025-09-12,Orion Logistics LLC,Warehousing Services,21500,Not paid,TRN34567,5,,
-INV-1011,2025-08-02,2025-09-25,Zenith Constructions,Interior Fit-out,13200,Paid,TRN56789,5,2025-09-24,
-INV-1013,2025-08-06,2025-09-08,Alpha Trading LLC,Annual Maintenance Contract,45000,Not paid,TRN12345,5,,
-INV-1015,2025-08-10,2025-10-03,Orion Logistics LLC,Cross-Border Shipping,15800,Not paid,TRN34567,5,,
-INV-1017,2025-08-14,2025-09-19,Zenith Constructions,Building Maintenance,17600,Paid,TRN56789,5,2025-09-18,
-INV-1019,2025-08-18,2025-09-11,Alpha Trading LLC,Staff Training Program,22000,Paid,TRN12345,5,2025-09-10,
-INV-1021,2025-08-22,2025-09-21,Orion Logistics LLC,Cold Chain Delivery,13000,Paid,TRN34567,5,2025-09-20,
-INV-1023,2025-08-26,2025-09-09,Zenith Constructions,Project Supervision,46000,Not paid,TRN56789,5,,
-INV-1025,2025-09-02,2025-10-04,Alpha Trading LLC,Security Services,16000,Not paid,TRN12345,5,,
-INV-1027,2025-09-06,2025-09-19,Orion Logistics LLC,Customs Clearance,17800,Paid,TRN34567,5,2025-09-18,
-INV-1029,2025-09-10,2025-09-13,Zenith Constructions,Equipment Rental,22500,Not paid,TRN56789,5,,
-INV-1031,2025-09-14,2025-09-27,Alpha Trading LLC,Workforce Outsourcing,13100,Paid,TRN12345,5,2025-09-26,
-INV-1033,2025-09-18,2025-09-21,Orion Logistics LLC,Last Mile Delivery,45500,Not paid,TRN34567,5,,
-INV-1035,2025-09-22,2025-10-15,Zenith Constructions,Construction Materials,15900,Not paid,TRN56789,5,,
-INV-1037,2025-09-10,2025-09-25,Alpha Trading LLC,Facility Management,17900,Paid,TRN12345,5,2025-09-24,
-INV-1039,2025-09-14,2025-09-09,Orion Logistics LLC,Bulk Transportation,23000,Not paid,TRN34567,5,,
-INV-1041,2025-09-18,2025-09-27,Zenith Constructions,Structural Engineering,13200,Paid,TRN56789,5,2025-09-26,
-INV-1043,2025-09-22,2025-09-24,Alpha Trading LLC,Training Workshops,47000,Not paid,TRN12345,5,,
-INV-1045,2025-09-07,2025-10-07,Orion Logistics LLC,Supply Chain Optimization,16100,Not paid,TRN34567,5,,
-INV-1047,2025-09-11,2025-09-25,Zenith Constructions,Renovation Works,18000,Paid,TRN56789,5,2025-09-24,
-INV-1049,2025-09-15,2025-09-20,Alpha Trading LLC,Software Development,23500,Not paid,TRN12345,5,,
+ARoice No.,ARoice Date,Due Date,Customer Name,Service Description,Amount (AED),Payment Status,VAT TRN,VAT %,Paid Date,Notes,Status
+AR-1001,2025-08-05,2025-10-10,Alpha Trading LLC,IT Consulting Services,12500,Paid,TRN12345,5,2025-10-09,,paid
+AR-1003,2025-08-12,2025-10-15,Orion Logistics LLC,Freight Forwarding,45200,Paid,TRN34567,5,2025-10-02,,paid
+AR-1005,2025-08-18,2025-11-08,Zenith Constructions,Civil Works,15600,Not paid,TRN56789,5,,,future
+AR-1007,2025-08-22,2025-10-20,Alpha Trading LLC,Software License Renewal,17400,Paid,TRN12345,5,2025-10-19,,paid
+AR-1009,2025-08-28,2025-10-12,Orion Logistics LLC,Warehousing Services,21500,Not paid,TRN34567,5,,,overdue
+AR-1011,2025-09-02,2025-10-25,Zenith Constructions,Interior Fit-out,13200,Paid,TRN56789,5,2025-10-14,,paid
+AR-1013,2025-09-06,2025-10-08,Alpha Trading LLC,Annual Maintenance Contract,45000,Not paid,TRN12345,5,,,overdue
+AR-1015,2025-09-10,2025-11-03,Orion Logistics LLC,Cross-Border Shipping,15800,Not paid,TRN34567,5,,,future
+AR-1017,2025-09-14,2025-10-19,Zenith Constructions,Building Maintenance,17600,Paid,TRN56789,5,2025-10-18,,paid
+AR-1019,2025-09-18,2025-10-11,Alpha Trading LLC,Staff Training Program,22000,Paid,TRN12345,5,2025-10-10,,paid
+AR-1021,2025-09-22,2025-10-21,Orion Logistics LLC,Cold Chain Delivery,13000,Paid,TRN34567,5,2025-10-20,,paid
+AR-1023,2025-09-26,2025-10-09,Zenith Constructions,Project Supervision,46000,Not paid,TRN56789,5,,,overdue
+AR-1025,2025-10-02,2025-11-04,Alpha Trading LLC,Security Services,16000,Not paid,TRN12345,5,,,future
+AR-1027,2025-10-06,2025-10-19,Orion Logistics LLC,Customs Clearance,17800,Paid,TRN34567,5,2025-10-18,,paid
+AR-1029,2025-10-10,2025-10-13,Zenith Constructions,Equipment Rental,22500,Not paid,TRN56789,5,,,overdue
+AR-1031,2025-10-14,2025-10-27,Alpha Trading LLC,Workforce Outsourcing,13100,Paid,TRN12345,5,2025-10-05,,paid
+AR-1033,2025-10-18,2025-10-21,Orion Logistics LLC,Last Mile Delivery,45500,Not paid,TRN34567,5,,,upcoming
+AR-1035,2025-10-22,2025-11-15,Zenith Constructions,Construction Materials,15900,Not paid,TRN56789,5,,,future
+AR-1037,2025-10-10,2025-10-25,Alpha Trading LLC,Facility Management,17900,Paid,TRN12345,5,2025-10-20,,paid
+AR-1039,2025-10-14,2025-10-09,Orion Logistics LLC,Bulk Transportation,23000,Not paid,TRN34567,5,,,overdue
+AR-1041,2025-10-18,2025-10-27,Zenith Constructions,Structural Engineering,13200,Paid,TRN56789,5,2025-10-18,,paid
+AR-1043,2025-10-22,2025-10-24,Alpha Trading LLC,Training Workshops,47000,Not paid,TRN12345,5,,,upcoming
+AR-1045,2025-10-07,2025-11-07,Orion Logistics LLC,Supply Chain Optimization,16100,Not paid,TRN34567,5,,,future
+AR-1047,2025-10-11,2025-10-25,Zenith Constructions,Renovation Works,18000,Paid,TRN56789,5,2025-10-12,,paid
+AR-1049,2025-10-15,2025-10-20,Alpha Trading LLC,Software Development,23500,Not paid,TRN12345,5,,,overdue
