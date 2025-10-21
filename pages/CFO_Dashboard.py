@@ -8,7 +8,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.alert_card import render_cfo_alerts_section
 from components.data_filter import apply_filters, get_filter_summary, validate_filters, parse_date_column
 from services.forecast_services import ForecastPreviewService
 from utils import get_data_loader
@@ -273,28 +272,6 @@ def render():
                     st.markdown(
                         "<div style='height:28px'></div>", unsafe_allow_html=True
                     )  # Spacing
-                    if st.button("Alerts", type="primary", use_container_width=True):
-                        st.session_state.show_alerts_only = True
-                        st.rerun()
-
-                if st.session_state.get("show_alerts_only", False):
-                    # Apply filters for alerts view using processed data
-                    filtered_df_for_alerts = apply_filters(
-                        processed_df, st.session_state.cfo_filters
-                    )
-                    latest_raw_for_alerts = filtered_df_for_alerts.iloc[-1]
-
-                    render_cfo_alerts_section(
-                        latest_raw_for_alerts, filtered_df_for_alerts
-                    )
-
-                    if st.button(
-                        "Back to Dashboard", type="secondary", use_container_width=True
-                    ):
-                        st.session_state.show_alerts_only = False
-                        st.rerun()
-
-                    return
 
                 # Apply filtering system with caching (use processed data for better performance)
                 filter_key = f"filtered_data_{hash(str(st.session_state.cfo_filters))}"
@@ -311,12 +288,6 @@ def render():
                 # Use filtered data for calculations
                 latest_raw = filtered_df.iloc[-1]
 
-                # Get alert metrics from filtered data
-                cash_balance = latest_raw.get("Cash Balance", 0)
-                latest_raw.get("Debt-to-Equity Ratio", 0)
-                net_income = latest_raw.get("Net Income", 0)
-                current_ratio = latest_raw.get("Current Ratio", 0)
-                dso = latest_raw.get("Days Sales Outstanding (DSO)", 0)
 
                 # Show filter summary
                 filter_summary = get_filter_summary(
@@ -877,9 +848,6 @@ def render():
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Footer / Alerts
-
-                render_cfo_alerts_section(latest_raw, raw_df)
 
                 # Footer from Home page
                 st.markdown(

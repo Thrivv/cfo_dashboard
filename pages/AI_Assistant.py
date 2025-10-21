@@ -1,9 +1,10 @@
-"""AI Assistant page with chat interface for financial queries."""
+"""AI Assistant page with modern chat interface for financial queries."""
 
 import streamlit as st
+import time
 
-from services.chat_services import process_financial_question
-from services.forecast_services import create_forecast_chart, run_forecast_job
+from services.chat_services import process_financial_question, is_table_response
+from services.forecast_services import create_forecast_chart, run_forecast_job, generate_chatbot_forecast_insights
 from services.query_doc import query_documents
 from utils import get_data_loader, save_chat_message
 
@@ -15,21 +16,13 @@ def suggest_questions():
         "What are our revenue trends?",
         "What is our profit margin?",
         "What are our operational efficiency metrics?",
-        # "Show me our financial performance summary",
-        # "What are our key financial KPIs?",
-        # "Analyze our working capital",
-        # "What are our debt-to-equity ratios?",
-        # "Show me our profitability analysis",
-        # "What are our cost structure trends?",
+        # FINANCIAL COMPARISON - Table-based Analysis
+        "Compare revenue vs expenses by quarter",
+        "Show me profit margin trends over time",
+        "Compare our performance across departments",
         # FORECASTING - Future Planning
         "Generate a forecast for Sales department",
         "Create a forecast for HR department",
-        # "Forecast our budget for IT department",
-        # "Predict revenue for next quarter",
-        # "Project cash flow for next 6 months",
-        # "Forecast expenses for Operations",
-        # "Create budget projection for Finance",
-        # "Predict spending trends for Marketing",
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
         "What are the important considerations from retail system services and Card schemes regulations",
         "What are the capital requirements?",
@@ -96,7 +89,7 @@ def is_rag_question(question):
     return any(keyword in question_lower for keyword in rag_keywords)
 
 
-def process_question(question, data):
+def process_question(question):
     """Process a question using routing for financial analysis, forecasting, and RAG document analysis."""
     try:
         # Routing based on question content
@@ -110,6 +103,7 @@ def process_question(question, data):
                     "text": "## Forecast Generated\n\nForecast data has been generated and chart displayed below.",
                     "forecast_data": response["forecast_data"],
                     "forecast_department": department,
+                    "original_question": question,
                 }
             else:
                 return "Unable to generate forecast. Please ensure you mention a specific department."
@@ -145,198 +139,258 @@ def extract_department(question):
     return "Unknown"
 
 
-def handle_question_processing(question, data):
+def response_generator(response_text):
+    """Generate streaming response for better UX."""
+    for word in response_text.split():
+        yield word + " "
+        time.sleep(0.02)  # Faster than tutorial for better UX
+
+def handle_question_processing(question):
     """Handle the complete question processing workflow."""
-    st.session_state.processing_question = True
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": question})
 
     try:
-        with st.spinner("Processing your question..."):
-            # Get response (could be text or dict with forecast data)
-            response = process_question(question, data)
+        # Get response (could be text or dict with forecast data)
+        response = process_question(question)
 
-            # Store response in chat history
-            st.session_state.ai_chat_history.append((question, response))
-
-            # Save to database (text only for database)
-            if isinstance(response, dict):
-                save_chat_message(question, response["text"])
-            else:
-                save_chat_message(question, response)
+        # Save to database (text only for database)
+        if isinstance(response, dict):
+            save_chat_message(question, response["text"])
+        else:
+            save_chat_message(question, response)
+        
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        
     except Exception as e:
-        st.error(f"Error processing question: {str(e)}")
-    finally:
-        st.session_state.processing_question = False
-
-    st.rerun()
+        error_msg = f"Error processing your question: {str(e)}. Please try again."
+        st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        save_chat_message(question, error_msg)
 
 
 def render():
-    """Render a modern, futuristic AI Assistant experience (fresh design)."""
-    data_loader = get_data_loader()
-    data = data_loader.get_raw_data()
+    """Render a modern AI Assistant with native Streamlit chat elements."""
+    # Initialize chat history with new format
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Ensure messages is always a list
+    if not isinstance(st.session_state.messages, list):
+        st.session_state.messages = []
 
-    if "ai_chat_history" not in st.session_state:
-        st.session_state.ai_chat_history = []
-    if "processing_question" not in st.session_state:
-        st.session_state.processing_question = False
+    # Sidebar for Quick questions
+    with st.sidebar:
+        st.markdown("## Quick Questions")
+        st.markdown("Click any question below to get started:")
 
-    # Note: Alert questions are now handled inline in the dashboard, not here
-    st.markdown(
-        """
-    <style>
-      .panel {background: linear-gradient(180deg, rgba(13,13,23,0.92), rgba(6,6,12,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px;}
-      .chat-title {color: #e6e9ef; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px;}
-      .chat-box {max-height: 420px; overflow-y: auto; padding-right: 6px; transition: max-height .25s ease;}
-      .chat-box.empty {min-height: 0; max-height: 0; height: 0; margin: 0; padding: 0; overflow: hidden;}
-      .msg {border-radius: 12px; padding: 12px 14px; margin: 8px 0; max-width: 88%;}
-      .msg-user {background: linear-gradient(135deg, rgba(148,2,245,0.20), rgba(41,128,185,0.20)); border: 1px solid rgba(148,2,245,0.35); color: #f1f3f5; margin-left: auto;}
-      .msg-ai {background: linear-gradient(180deg, rgba(18,18,30,0.95), rgba(12,12,22,0.98)); border: 1px solid rgba(255,255,255,0.08); color: #cfd6dd;}
-      .composer textarea {height: 72px !important;}
+        questions = suggest_questions()
+        for idx, question in enumerate(questions):
+            button_key = f"quick_btn_{idx}"
+            if st.button(
+                question,
+                key=button_key,
+                use_container_width=True,
+            ):
+                with st.spinner("Thinking..."):
+                    # Add user message to chat history immediately
+                    st.session_state.messages.append({"role": "user", "content": question})
+                    
+                    try:
+                        # Get response
+                        response = process_question(question)
+                        
+                        # Save to database (text only for database)
+                        if isinstance(response, dict):
+                            save_chat_message(question, response["text"])
+                        else:
+                            save_chat_message(question, response)
+                        
+                        # Add assistant response to chat history
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        
+                    except Exception as e:
+                        error_msg = f"Error processing your question: {str(e)}. Please try again."
+                        st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                        save_chat_message(question, error_msg)
+                st.rerun()
 
-      /* Style Streamlit expander to look like our panel */
-      [data-testid="stExpander"] > details {background: linear-gradient(180deg, rgba(13,13,23,0.92), rgba(6,6,12,0.98)); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;}
-      [data-testid="stExpander"] summary {color: #c9d1d9; font-weight: 600;}
-      [data-testid="stExpander"] .streamlit-expanderContent {padding: 8px 12px 12px 12px;}
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
+    # Display chat messages from history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            # Handle different response types
+            if isinstance(message["content"], dict):
+                # Handle forecast responses
+                response_text = message["content"]["text"]
+                forecast_data = message["content"].get("forecast_data")
+                forecast_department = message["content"].get("forecast_department")
+                original_question = message["content"].get("original_question", "")
+                
+                # Determine service type
+                if is_forecast_question(original_question):
+                    service_type = "Forecasting Service"
+                elif is_rag_question(original_question):
+                    service_type = "Document Analysis (RAG)"
+                else:
+                    service_type = "Financial Analysis"
 
-    col_main, col_side = st.columns([2.2, 1])
-    with col_main:
-        chat_container = st.container()
-        with chat_container:
-            if st.session_state.ai_chat_history:
-                st.markdown('<div class="chat-box">', unsafe_allow_html=True)
-                for idx, chat_item in enumerate(st.session_state.ai_chat_history):
-                    # Handle chat format (question, answer)
-                    if len(chat_item) >= 2:
-                        question, answer = chat_item[0], chat_item[1]
+                # Display service type
+                st.caption(f"🔧 {service_type}")
+                
+                # Display response content
+                if is_table_response(response_text):
+                    st.markdown(response_text)
+                else:
+                    st.markdown(response_text)
+                
+                # Add forecast insights if available
+                if "Forecast Generated" in response_text and forecast_data:
+                    insights = generate_chatbot_forecast_insights(forecast_data, forecast_department)
+                    st.markdown(insights, unsafe_allow_html=True)
+
+                # Show forecast chart if available
+                if "Forecast Generated" in response_text and forecast_data:
+                    create_forecast_chart(forecast_data, forecast_department, chart_height=200)
+            else:
+                # Handle string responses
+                response_text = message["content"]
+                
+                # Determine service type based on previous message
+                if len(st.session_state.messages) > 1:
+                    prev_msg = st.session_state.messages[-2] if message["role"] == "assistant" else None
+                    if prev_msg and prev_msg["role"] == "user":
+                        if is_forecast_question(prev_msg["content"]):
+                            service_type = "Forecasting Service"
+                        elif is_rag_question(prev_msg["content"]):
+                            service_type = "Document Analysis (RAG)"
+                        else:
+                            service_type = "Financial Analysis"
                     else:
-                        continue
+                        service_type = "Financial Analysis"
+                else:
+                    service_type = "Financial Analysis"
+                
+                # Display service type
+                st.caption(f"🔧 {service_type}")
+                
+                # Display response content
+                if is_table_response(response_text):
+                    st.markdown(response_text)
+                else:
+                    st.markdown(response_text)
 
-                    user_msg = f"You ➠ {question}"
-                    st.markdown(
-                        f"<div class='msg msg-user'>{user_msg}</div>",
-                        unsafe_allow_html=True,
-                    )
-
-                    # Determine service type for display
-                    if is_forecast_question(question):
+    # Accept user input with modern chat input
+    if prompt := st.chat_input("Ask about financial metrics, forecasts, invoices, regulations, or business performance..."):
+        # Add user message to chat history immediately
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Process the question
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    # Get response
+                    response = process_question(prompt)
+                    
+                    # Determine service type
+                    if is_forecast_question(prompt):
                         service_type = "Forecasting Service"
-                    elif is_rag_question(question):
+                    elif is_rag_question(prompt):
                         service_type = "Document Analysis (RAG)"
                     else:
                         service_type = "Financial Analysis"
-
-                    # Handle response format (could be string or dict with forecast data)
-                    if isinstance(answer, dict):
-                        response_text = answer["text"]
-                        forecast_data = answer.get("forecast_data")
-                        forecast_department = answer.get("forecast_department")
+                    
+                    # Display service type
+                    st.caption(f"🔧 {service_type}")
+                    
+                    # Handle different response types
+                    if isinstance(response, dict):
+                        # Forecast response
+                        response_text = response["text"]
+                        forecast_data = response.get("forecast_data")
+                        forecast_department = response.get("forecast_department")
+                        
+                        # Display response with streaming effect
+                        if is_table_response(response_text):
+                            st.markdown(response_text)
+                        else:
+                            st.write_stream(response_generator(response_text))
+                        
+                        # Add forecast insights if available
+                        if "Forecast Generated" in response_text and forecast_data:
+                            insights = generate_chatbot_forecast_insights(forecast_data, forecast_department)
+                            st.markdown(insights, unsafe_allow_html=True)
+                        
+                        # Show forecast chart if available
+                        if "Forecast Generated" in response_text and forecast_data:
+                            create_forecast_chart(forecast_data, forecast_department, chart_height=200)
+                        
+                        # Add to chat history
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        
+                        # Save to database
+                        save_chat_message(prompt, response_text)
                     else:
-                        response_text = answer
-                        forecast_data = None
-                        forecast_department = None
-
-                    # Display AI response with service type
-                    ai_msg = f"Krayra ⤵ ({service_type})<br/>{response_text}"
-
-                    # Add forecast insights to the main message if available
-                    if "Forecast Generated" in response_text and forecast_data:
-                        from services.forecast_services import (
-                            generate_chatbot_forecast_insights,
-                        )
-
-                        insights = generate_chatbot_forecast_insights(
-                            forecast_data, forecast_department
-                        )
-                        # Merge insights into the main message
-                        ai_msg += f"<br/>{insights}"
-
-                    st.markdown(
-                        f"<div class='msg msg-ai'>{ai_msg}</div>",
-                        unsafe_allow_html=True,
-                    )
-
-                    # Show forecast chart if available
-                    if "Forecast Generated" in response_text and forecast_data:
-                        # Display forecast chart
-                        create_forecast_chart(
-                            forecast_data, forecast_department, chart_height=200
-                        )
-
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    '<div class="chat-box empty"></div>', unsafe_allow_html=True
-                )
-
-        # Use form for Enter key support
-        with st.form(key="question_form", clear_on_submit=True):
-            user_question = st.text_area(
-                "Your question",
-                height=72,
-                placeholder="Ask about financial metrics, forecasts, invoices, regulations, or business performance...",
-                key="ai_question_input",
-                label_visibility="collapsed",
-            )
-
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                submitted = st.form_submit_button(
-                    "Ask TO KraYa",
-                    type="primary",
-                    disabled=st.session_state.get("processing_question", False),
-                )
-            with col2:
-                clear_clicked = st.form_submit_button(
-                    "Clear", disabled=st.session_state.get("processing_question", False)
-                )
-
-        # Handle form submission
-        if submitted and user_question.strip():
-            handle_question_processing(user_question, data)
-        elif clear_clicked:
-            st.session_state.ai_chat_history = []
-            st.session_state.processing_question = False
-            # Clear the session state and let the page naturally refresh
-            st.rerun()
-
-        # Define button_disabled for quick questions
-        button_disabled = st.session_state.get("processing_question", False)
-
-    with col_side:
-        with st.expander("Quick questions", expanded=True):
-            if st.session_state.get("processing_question", False):
-                st.info("Processing your question...")
-
-            questions = suggest_questions()
-            for idx, question in enumerate(questions):
-                button_key = f"quick_btn_{idx}"
-
-                if st.button(
-                    question,
-                    key=button_key,
-                    use_container_width=True,
-                    disabled=button_disabled,
-                ):
-                    handle_question_processing(question, data)
-
-        with st.expander("CFO Data Status", expanded=True):
-            if data is not None:
-                st.success("CFO dashboard data active")
-                st.info(f"{len(data)} financial records loaded")
-            else:
-                st.warning("CFO data unavailable")
-                st.info("ERP financial data required for analysis")
-
-                # Service Status
-                st.success("📊 Financial Analysis: Active")
-                st.success("🔮 Forecasting Service: Active")
-                st.success("📄 Document Analysis (RAG): Active")
-
-            if st.session_state.ai_chat_history:
-                st.metric(
-                    "CFO queries processed", len(st.session_state.ai_chat_history)
-                )
+                        # String response
+                        if is_table_response(response):
+                            st.markdown(response)
+                        else:
+                            st.write_stream(response_generator(response))
+                        
+                        # Add to chat history
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        
+                        # Save to database
+                        save_chat_message(prompt, response)
+                        
+                except Exception as e:
+                    error_msg = f"Error processing your question: {str(e)}. Please try again."
+                    st.error(error_msg)
+                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                    save_chat_message(prompt, error_msg)
+    
+    # Display placeholder when no messages (after all processing)
+    if len(st.session_state.messages) == 0:
+        st.markdown(
+            """
+            <style>
+            .animate-character {
+                text-transform: uppercase;
+                background-image: linear-gradient(
+                    -225deg,
+                    #231557 0%,
+                    #44107a 29%,
+                    #ff1361 67%,
+                    #fff800 100%
+                );
+                background-size: auto auto;
+                background-clip: border-box;
+                background-size: 200% auto;
+                color: #fff;
+                background-clip: text;
+                text-fill-color: transparent;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: textclip 2s linear infinite;
+                display: inline-block;
+                font-size: 48px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+            
+            @keyframes textclip {
+                to {
+                    background-position: 200% center;
+                }
+            }
+            </style>
+            <div style="text-align: center; padding: 60px 20px; color: #666;">
+                <h1 class="animate-character">Hi... There! I'm Kraya Your AI Assistant</h2>
+                <p style="font-size: 16px; margin: 0;">I'm here to help you with your financial questions and analysis.</p>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
