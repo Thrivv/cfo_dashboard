@@ -1,4 +1,4 @@
-"""Chat services for AI assistant functionality."""
+"""Chat services for AI assistant functionality.."""
 
 import runpod
 
