@@ -90,7 +90,7 @@ def ingest_all_data():
     qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
-    # Ingest AP Invoice using the new enhanced CSV function
+    # Ingest AP Invoice using the new enhanced CSV functions
     ap_invoice_path = "data/AP_Invoice.csv"
     ingest_csv_to_qdrant_enhanced(
         ap_invoice_path, "ap_invoices", qdrant_client, embedding_model

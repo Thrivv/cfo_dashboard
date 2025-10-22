@@ -849,7 +849,7 @@ def render():
                 st.markdown("</div>", unsafe_allow_html=True)
 
 
-                # Footer from Home page
+                # Footer from Home pages
                 st.markdown(
                     f"""
                 <div class="footer">

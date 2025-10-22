@@ -32,9 +32,6 @@ def suggest_questions():
 def is_forecast_question(question):
     """Check if the question is asking for forecasting."""
     forecast_keywords = [
-        "forecast",
-        "predict",
-        "projection",
         "generate a forecast",
         "create a forecast",
     ]
@@ -92,7 +89,7 @@ def is_rag_question(question):
 def is_greeting(question):
     """Check if the question is a simple greeting."""
     greeting_keywords = [
-        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "hi", "hii", "hey there", "hii...", "hello", "hey", "good morning", "good afternoon", "good evening",
         "greetings", "howdy", "what's up", "sup", "yo", "hi...", "who are you", "what is your name","how are you",
         "what can you do for me", "what can you do for me","what do you do", "what do you know", "what do you think",
     ]
