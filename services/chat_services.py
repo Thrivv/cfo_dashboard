@@ -1,8 +1,8 @@
-"""Chat services for AI assistant functionality."""
+"""Chat services for AI assistant functionality.."""
 
 import runpod
 
-from prompts import get_retry_prompt, get_system_prompt, get_smart_prompt
+from prompts import get_retry_prompt, get_system_prompt, get_smart_prompt, get_question_classification_prompt
 from utils import get_chunk_service
 from utils.config import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
 
@@ -64,6 +64,39 @@ def run_chatbot_job(prompt):
         return "Job timed out. Please try again."
     except Exception as e:
         return f"Error: {str(e)}"
+
+
+def classify_question(question):
+    """Classify if a question is financial/business related using LLM.
+    
+    Args:
+        question (str): User question to classify
+        
+    Returns:
+        str: "FINANCIAL" or "NON_FINANCIAL"
+    """
+    try:
+        # Get classification prompt
+        prompt = get_question_classification_prompt(question)
+        
+        # Get AI response
+        response = run_chatbot_job(prompt)
+        
+        # Extract text from response
+        if isinstance(response, dict) and "generated_text" in response:
+            response_str = response["generated_text"].strip().upper()
+        else:
+            response_str = str(response).strip().upper()
+        
+        # Return classification
+        if "NON_FINANCIAL" in response_str:
+            return "NON_FINANCIAL"
+        else:
+            return "FINANCIAL"
+            
+    except Exception as e:
+        # Default to financial if classification fails
+        return "FINANCIAL"
 
 
 def process_financial_question(question):

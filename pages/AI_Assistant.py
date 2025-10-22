@@ -3,7 +3,7 @@
 import streamlit as st
 import time
 
-from services.chat_services import process_financial_question, is_table_response
+from services.chat_services import process_financial_question, is_table_response, classify_question
 from services.forecast_services import create_forecast_chart, run_forecast_job, generate_chatbot_forecast_insights
 from services.query_doc import query_documents
 from utils import get_data_loader, save_chat_message
@@ -32,9 +32,6 @@ def suggest_questions():
 def is_forecast_question(question):
     """Check if the question is asking for forecasting."""
     forecast_keywords = [
-        "forecast",
-        "predict",
-        "projection",
         "generate a forecast",
         "create a forecast",
     ]
@@ -89,10 +86,32 @@ def is_rag_question(question):
     return any(keyword in question_lower for keyword in rag_keywords)
 
 
+def is_greeting(question):
+    """Check if the question is a simple greeting."""
+    greeting_keywords = [
+        "hi", "hii", "hey there", "hii...", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "greetings", "howdy", "what's up", "sup", "yo", "hi...", "who are you", "what is your name","how are you",
+        "what can you do for me", "what can you do for me","what do you do", "what do you know", "what do you think",
+    ]
+    question_lower = question.lower().strip()
+    return question_lower in greeting_keywords or question_lower.startswith(("hi ", "hello ", "hey "))
+
+
 def process_question(question):
     """Process a question using routing for financial analysis, forecasting, and RAG document analysis."""
     try:
-        # Routing based on question content
+        # Check for greetings first
+        if is_greeting(question):
+            return "Hello! I'm Kraya, your financial AI assistant. I'm here to help you with financial analysis, forecasting, and document insights. How can I assist you today?"
+        
+        # Use LLM to classify if question is financial/business related
+        classification = classify_question(question)
+        
+        # If not financial, return appropriate message
+        if classification == "NON_FINANCIAL":
+            return "I don't have data to answer this question. I'm specialized in financial analysis, forecasting, and business insights. Please ask me about revenue trends, profit margins, department performance, or other financial metrics."
+        
+        # Routing based on question content for financial questions
         if is_forecast_question(question):
             # Use forecast service
             response = run_forecast_job(question)
@@ -319,7 +338,7 @@ def render():
             }
             </style>
             <div style="text-align: center; padding: 60px 20px; color: #666;">
-                <h1 class="animate-character">Hi... There! I'm Kraya Your AI Assistant</h2>
+                <h1 class="animate-character">Hi... There! I'm Kraya Your AI Assistant</h1>
                 <p style="font-size: 16px; margin: 0;">I'm here to help you with your financial questions and analysis.</p>
             </div>
             """, 

@@ -1,30 +1,30 @@
 Invoice No.,Invoice Date,Due Date,Supplier Name,Service Description,Amount (AED),Payment Status,VAT TRN,VAT %,Paid Date,Status
 AP-2001,2025-09-03,2025-10-18,Gulf Tech Solutions LLC,IT Hardware Supply,32500,Paid,TRN77890,5,2025-10-15,paid
-AP-2002,2025-09-07,2025-10-22,Emirates Logistics FZC,Freight Services,18200,Not paid,TRN88901,5,,upcoming (1 days remaining)
+AP-2002,2025-09-07,2025-10-22,Emirates Logistics FZC,Freight Services,18200,Not paid,TRN88901,5,,upcoming (0 days remaining)
 AP-2003,2025-09-10,2025-11-10,Desert Catering Services,Corporate Catering,7600,paid,TRN99012,5,2025-10-17,paid
 AP-2004,2025-09-12,2025-10-27,Arabian Construction Co.,Facility Renovation,45200,Paid,TRN10123,5,2025-10-20,paid
-AP-2008,2025-10-23,2025-11-07,Desert Catering Services,Pantry Services,6700,Not paid,TRN99012,5,,future (17 days remaining)
+AP-2008,2025-10-23,2025-11-07,Desert Catering Services,Pantry Services,6700,Not paid,TRN99012,5,,future (16 days remaining)
 AP-2009,2025-09-26,2025-10-25,Gulf Tech Solutions LLC,Network Maintenance,15400,Paid,TRN77890,5,2025-10-18,paid
-AP-2010,2025-09-28,2025-11-30,Arabian Construction Co.,Building Repairs,19800,Not paid,TRN10123,5,,future (40 days remaining)
-AP-2011,2025-10-01,2025-10-15,Emirates Logistics FZC,Cargo Handling,9500,Not paid,TRN88901,5,,overdue (6 days ago)
+AP-2010,2025-09-28,2025-11-30,Arabian Construction Co.,Building Repairs,19800,Not paid,TRN10123,5,,future (39 days remaining)
+AP-2011,2025-10-01,2025-10-15,Emirates Logistics FZC,Cargo Handling,9500,Not paid,TRN88901,5,,overdue (7 days ago)
 AP-2015,2025-10-10,2025-10-26,Gulf Tech Solutions LLC,Data Center Equipment,37800,Paid,TRN77890,5,2025-10-15,paid
-AP-2016,2025-09-12,2025-11-12,Desert Catering Services,Cafeteria Catering,8800,Not paid,TRN99012,5,,future (22 days remaining)
-AP-2017,2025-09-15,2025-11-12,Arabian Construction Co.,Civil Works,46000,Not paid,TRN10123,5,,future (22 days remaining)
+AP-2016,2025-09-12,2025-11-12,Desert Catering Services,Cafeteria Catering,8800,Not paid,TRN99012,5,,future (21 days remaining)
+AP-2017,2025-09-15,2025-11-12,Arabian Construction Co.,Civil Works,46000,Not paid,TRN10123,5,,future (21 days remaining)
 AP-2019,2025-10-19,2025-11-15,Emirates Logistics FZC,Warehousing Services,12100,paid,TRN88901,5,2025-10-07,paid
-AP-2022,2025-09-26,2025-11-02,Gulf Tech Solutions LLC,IT Security Services,26900,Not paid,TRN77890,5,,future (12 days remaining)
-AP-2023,2025-09-28,2025-11-17,Arabian Construction Co.,Structural Engineering,33000,Not paid,TRN10123,5,,future (27 days remaining)
-AP-2025,2025-10-04,2025-11-05,Emirates Logistics FZC,Customs Clearance,14600,Not paid,TRN88901,5,,future (15 days remaining)
-AP-2026,2025-09-06,2025-11-19,Desert Catering Services,Event Catering,7700,Not paid,TRN99012,5,,future (29 days remaining)
+AP-2022,2025-09-26,2025-11-02,Gulf Tech Solutions LLC,IT Security Services,26900,Not paid,TRN77890,5,,future (11 days remaining)
+AP-2023,2025-09-28,2025-11-17,Arabian Construction Co.,Structural Engineering,33000,Not paid,TRN10123,5,,future (26 days remaining)
+AP-2025,2025-10-04,2025-11-05,Emirates Logistics FZC,Customs Clearance,14600,Not paid,TRN88901,5,,future (14 days remaining)
+AP-2026,2025-09-06,2025-11-19,Desert Catering Services,Event Catering,7700,Not paid,TRN99012,5,,future (28 days remaining)
 AP-2029,2025-10-12,2025-11-25,Gulf Tech Solutions LLC,Software Development,29900,Paid,TRN77890,5,2025-10-02,paid
 AP-2030,2025-09-14,2025-10-25,Arabian Construction Co.,Electrical Works,22000,Paid,TRN10123,5,2025-10-19,paid
 AP-2032,2025-09-18,2025-11-13,Emirates Logistics FZC,Cold Chain Delivery,18500,Paid,TRN88901,5,2025-09-01,paid
 AP-2033,2025-10-20,2025-10-24,Desert Catering Services,Corporate Meals,8600,Paid,TRN99012,5,2025-10-13,paid
 AP-2036,2025-09-26,2025-10-27,Gulf Tech Solutions LLC,Hardware Maintenance,21000,Paid,TRN77890,5,2025-10-10,paid
-AP-2037,2025-09-28,2025-11-11,Arabian Construction Co.,Manpower Services,26700,Not paid,TRN10123,5,,future (21 days remaining)
-AP-2039,2025-10-01,2025-10-22,Emirates Logistics FZC,Last Mile Delivery,11900,Not paid,TRN88901,5,,upcoming (1 days remaining)
-AP-2040,2025-09-03,2025-11-07,Desert Catering Services,Canteen Management,7300,Not paid,TRN99012,5,,future (17 days remaining)
-AP-2043,2025-09-09,2025-11-23,Gulf Tech Solutions LLC,Cybersecurity Services,25900,Not paid,TRN77890,5,,future (33 days remaining)
+AP-2037,2025-09-28,2025-11-11,Arabian Construction Co.,Manpower Services,26700,Not paid,TRN10123,5,,future (20 days remaining)
+AP-2039,2025-10-01,2025-10-22,Emirates Logistics FZC,Last Mile Delivery,11900,Not paid,TRN88901,5,,upcoming (0 days remaining)
+AP-2040,2025-09-03,2025-11-07,Desert Catering Services,Canteen Management,7300,Not paid,TRN99012,5,,future (16 days remaining)
+AP-2043,2025-09-09,2025-11-23,Gulf Tech Solutions LLC,Cybersecurity Services,25900,Not paid,TRN77890,5,,future (32 days remaining)
 AP-2044,2025-10-11,2025-11-27,Arabian Construction Co.,Renovation Works,31200,Paid,TRN10123,5,2025-10-05,paid
-AP-2046,2025-10-15,2025-11-06,Emirates Logistics FZC,Port Handling,17800,Not paid,TRN88901,5,,future (16 days remaining)
-AP-2047,2025-10-17,2025-10-18,Desert Catering Services,Pantry Supply,6200,Not paid,TRN99012,5,,overdue (3 days ago)
+AP-2046,2025-10-15,2025-11-06,Emirates Logistics FZC,Port Handling,17800,Not paid,TRN88901,5,,future (15 days remaining)
+AP-2047,2025-10-17,2025-10-18,Desert Catering Services,Pantry Supply,6200,Not paid,TRN99012,5,,overdue (4 days ago)
 AP-2050,2025-09-23,2025-10-30,Gulf Tech Solutions LLC,Network Security,31000,Paid,TRN77890,5,2025-10-20,paid

@@ -10,6 +10,7 @@ from .system_prompts import (
     get_smart_prompt,
     get_general_question_prompt,
     get_greeting_prompt,
+    get_question_classification_prompt,
 )
 
-__all__ = ["get_system_prompt", "get_retry_prompt", "get_smart_prompt", "get_general_question_prompt", "get_greeting_prompt", "PROMPT_TYPES"]
+__all__ = ["get_system_prompt", "get_retry_prompt", "get_smart_prompt", "get_general_question_prompt", "get_greeting_prompt", "get_question_classification_prompt", "PROMPT_TYPES"]

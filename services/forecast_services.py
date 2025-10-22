@@ -438,11 +438,10 @@ Recent Values:
         """
 
     prompt = f""""Analyze this forecast data and provide concise business insights for the {department} department.
-    The forecast data consists of the predictions gnerated by a model.Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
-    If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that justify this prediction.
-    \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justify it against historical data]\n👉 [Insight 2 with forecast values, justify the resason of the finding]\n👉 [Insight 3 with specific values, justify and explain the resason of abnormality]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
-    RULES:\n• Use exact values from the data.\n• MAXIMUM 120 WORDS for Key Findings - count and stop at 120.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• EXACTLY 3 insights in Key Findings.\n• Be extremely brief and direct.\n• If the trend is not observed in historical data, provide possible yearly fluctions.\n• Refrain from using indefinite tone on forecast data.\n• Focus on key trends only.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts.\n
-    • The Conclusion must be a concise summary (2-3 sentences)."""
+    Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
+    If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that might justify this prediction.
+    \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justify it against historical data]\n👉 [Insight 2 with specific values, justified, explained the resason of abnormality]\n👉 [Insight 3 with specific values, explain possible reason of trend]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
+    RULES:\n• Use exact values from the data.\n• MAXIMUM 200 WORDS for Key Findings - count and stop at 200.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• EXACTLY 3 insights in Key Findings.\n• Be extremely brief without ambigious tone\n• Focus on key trends only.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts."""
     return prompt
 
 
