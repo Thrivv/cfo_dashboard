@@ -11,7 +11,16 @@ from sentence_transformers import SentenceTransformer
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.config import EMBEDDING_MODEL, QDRANT_API_KEY, QDRANT_URL
+from utils.config import (
+    EMBEDDING_MODEL,
+    QDRANT_API_KEY,
+    QDRANT_URL,
+    AR_INVOICE_COLLECTION,
+    AP_INVOICE_COLLECTION,
+    PO_TC_COLLECTION,
+    REGULATIONS_COLLECTION,
+    REBATE_COLLECTION,
+)
 from utils.pipeline import ingest_document
 
 
@@ -29,13 +38,16 @@ def ingest_csv_to_qdrant_enhanced(
         df = pd.read_csv(file_path)
         embedding_dim = embedding_model.get_sentence_embedding_dimension()
 
-        print(f"Creating collection '{collection_name}' with vector size {embedding_dim}...")
-        client.recreate_collection(
-            collection_name=collection_name,
-            vectors_config=models.VectorParams(
-                size=embedding_dim, distance=models.Distance.COSINE
-            ),
-        )
+        try:
+            client.get_collection(collection_name=collection_name)
+        except Exception:
+            print(f"Creating collection '{collection_name}' with vector size {embedding_dim}...")
+            client.create_collection(
+                collection_name=collection_name,
+                vectors_config=models.VectorParams(
+                    size=embedding_dim, distance=models.Distance.COSINE
+                ),
+            )
 
         points = []
         for _, row in df.iterrows():
@@ -60,6 +72,7 @@ def ingest_csv_to_qdrant_enhanced(
             # Use the entire row as a payload, including a normalized payment status.
             payload = row.to_dict()
             payload["source_file"] = file_path
+            payload["content"] = text_chunk
 
             # Qdrant filters work best on well-defined types. Normalize payment status.
             payload["payment_status_keyword"] = str(row["Payment Status"]).strip().lower()
@@ -93,28 +106,34 @@ def ingest_all_data():
     # Ingest AP Invoice using the new enhanced CSV functions
     ap_invoice_path = "data/AP_Invoice.csv"
     ingest_csv_to_qdrant_enhanced(
-        ap_invoice_path, "ap_invoices", qdrant_client, embedding_model
+        ap_invoice_path, AP_INVOICE_COLLECTION, qdrant_client, embedding_model
     )
     print("✅ AP Invoice ingested")
 
     # Ingest AR Invoice using the new enhanced CSV function
     ar_invoice_path = "data/AR_Invoice.csv"
     ingest_csv_to_qdrant_enhanced(
-        ar_invoice_path, "ar_invoices", qdrant_client, embedding_model
+        ar_invoice_path, AR_INVOICE_COLLECTION, qdrant_client, embedding_model
     )
     print("✅ AR Invoice ingested")
 
     # Ingest Regulations PDF using the existing pipeline
     regulations_path = "data/RPSR_RPSCSR_UAE.pdf"
     regulations_metadata = {"doc_name": "RPS_CSR_ENG.pdf", "source_type": "regulation"}
-    ingest_document(regulations_path, regulations_metadata)
+    ingest_document(regulations_path, regulations_metadata, REGULATIONS_COLLECTION)
     print("✅ Regulations PDF ingested")
 
     # Ingest PO T&C PDF using the existing pipeline
     po_tc_path = "data/PO_T&C.pdf"
     po_tc_metadata = {"doc_name": "PO_T&C.pdf", "source_type": "terms_and_conditions"}
-    ingest_document(po_tc_path, po_tc_metadata)
+    ingest_document(po_tc_path, po_tc_metadata, PO_TC_COLLECTION)
     print("✅ PO T&C PDF ingested")
+
+    # Ingest Rebate PDF using the existing pipeline
+    rebate_path = "data/Rebate.pdf"
+    rebate_metadata = {"doc_name": "Rebate.pdf", "source_type": "rebate"}
+    ingest_document(rebate_path, rebate_metadata, REBATE_COLLECTION)
+    print("✅ Rebate PDF ingested")
 
 
 if __name__ == "__main__":

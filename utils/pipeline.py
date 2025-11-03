@@ -9,9 +9,16 @@ import pandas as pd
 from qdrant_client.models import PointStruct
 
 from utils.chunker import chunk_text
-from utils.clear_data import clear_all_qdrant, clear_all_redis
+from utils.clear_data import clear_qdrant_collection, clear_all_redis
 from utils.embedding import embed_texts
-from utils.llm_client import call_vllm
+from utils.llm_client_openrouter import call_vllm
+from utils.config import (
+    AR_INVOICE_COLLECTION,
+    AP_INVOICE_COLLECTION,
+    PO_TC_COLLECTION,
+    REGULATIONS_COLLECTION,
+    REBATE_COLLECTION,
+)
 
 # Local utility imports
 from utils.parser import parse_csv, parse_pdf
@@ -63,16 +70,17 @@ def check_and_update_data():
     if last_update_date != today_str:
         print("🚀 New day detected. Clearing old data and ingesting fresh data...")
 
-        # 1. Clear all existing data from Qdrant and Redis
-        print("🧹 Clearing Qdrant and Redis data...")
-        clear_all_qdrant()
+        # 1. Clear only AP and AR invoice collections
+        print("🧹 Clearing AP and AR invoice collections...")
+        clear_qdrant_collection(AR_INVOICE_COLLECTION)
+        clear_qdrant_collection(AP_INVOICE_COLLECTION)
         clear_all_redis()
-        print("✅ Caches, vectors, and metadata wiped clean.")
+        print("✅ Invoice collections and Redis cache wiped clean.")
 
         # 2. Update invoice CSV files with the latest status
         print("🔄 Updating invoice statuses...")
-        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
-        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
+        update_invoice_status_and_save("data/AP_Invoice.csv")
+        update_invoice_status_and_save("data/AR_Invoice.csv")
         print("✅ Invoice statuses updated.")
 
         # 3. Ingest all data from scratch
@@ -93,11 +101,11 @@ def load_template(template_name: str) -> str:
     """Load the selected template from insights.json."""
     with open("prompts/insights.json", "r") as f:
         templates = json.load(f)
-    return templates.get(template_name, templates["default"])
+    return templates.get(template_name, templates["qa_template"])
 
 
 # -------- Ingestion Pipeline --------
-def ingest_document(path: str, metadata: dict):
+def ingest_document(path: str, metadata: dict, collection_name: str):
     """Embed and index documents (PDF or CSV) into Qdrant."""
     if path.endswith(".pdf"):
         text = parse_pdf(path)
@@ -108,7 +116,7 @@ def ingest_document(path: str, metadata: dict):
         raise ValueError("Unsupported file type")
 
     vectors = embed_texts(chunks)
-    init_collection(len(vectors[0]))
+    init_collection(collection_name, len(vectors[0]))
 
     points_to_upsert = []
     for chunk, vector in zip(chunks, vectors):
@@ -120,7 +128,7 @@ def ingest_document(path: str, metadata: dict):
             PointStruct(id=chunk_id, vector=vector, payload={"chunk_id": chunk_id})
         )
 
-    upsert_embeddings(points_to_upsert)
+    upsert_embeddings(collection_name, points_to_upsert)
 
 
 # -------- Query Pipeline (Unified RAG + Invoice Logic) --------
@@ -131,12 +139,28 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
 
     # Step 1: Vector Search + Rerank
     q_vec = embed_texts([query])[0]
-    results = search(q_vec, top_k=top_k)
+    collections_to_search = [
+        AR_INVOICE_COLLECTION,
+        AP_INVOICE_COLLECTION,
+        PO_TC_COLLECTION,
+        REGULATIONS_COLLECTION,
+        REBATE_COLLECTION,
+    ]
+    
+    all_results = []
+    for collection in collections_to_search:
+        results = search(collection, q_vec, top_k=top_k)
+        all_results.extend(results)
+
     docs = []
-    for r in results:
-        metadata = get_metadata(r.payload["chunk_id"])
-        if metadata and "content" in metadata:
-            docs.append(metadata["content"])
+    for r in all_results:
+        if "chunk_id" in r.payload:
+            metadata = get_metadata(r.payload["chunk_id"])
+            if metadata and "content" in metadata:
+                docs.append(metadata["content"])
+        elif "content" in r.payload:
+            docs.append(r.payload["content"])
+    
     reranked = rerank(query, docs)
     top_matches = "\n\n".join(reranked[:2])
 
@@ -246,6 +270,8 @@ Retrieved Context (Top Matches):
     prompt = template.format(
         context=context,
         query=query,
+        Only_AR=ar_csv,
+        Only_AP=ap_csv,
         AR_context=AR_context,
         AP_context=AP_context,
         regulations_context=reg_text,

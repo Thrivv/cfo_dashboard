@@ -1,5 +1,6 @@
 import sys
 
+from prompts.rag_chatbot import RAG_CHATBOT_PROMPT
 from utils.pipeline import query_rag
 
 
@@ -21,7 +22,7 @@ def select_template(query: str) -> str:
         "account payable" in query_lower or "payables" in query_lower
     ):
         return "ap_opportunity_summary"
-    return "qa_template"
+    return RAG_CHATBOT_PROMPT
 
 
 def query_documents(query: str):

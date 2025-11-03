@@ -12,7 +12,7 @@ def generate_due_tables():
     - AR_df: full AR dataframe (cleaned)
     - AP_df: full AP dataframe (cleaned).
     """
-    today = datetime.now()
+    today = pd.to_datetime('today').normalize()
 
     # Load AR and AP
     ar_df = pd.read_csv("data/AR_Invoice.csv")
@@ -45,21 +45,27 @@ def generate_due_tables():
     ar_pending_filter = (
         (ar_df["Payment Status"].astype(str).str.lower() == "not paid")
         & (ar_df["Due Date"].notnull())
-        & (ar_df["Due Date"] > today)
+        & (ar_df["Due Date"] >= today)
         & (ar_df["Due Date"] <= (today + timedelta(days=15)))
     )
     ar_pending = ar_df[ar_pending_filter].copy()
     ar_pending["Days Remaining"] = (ar_pending["Due Date"] - today).dt.days
+    ar_pending["Days Remaining"] = ar_pending["Days Remaining"].apply(
+        lambda days: "today" if days == 0 else days
+    )
     top_4_ar = ar_pending.nsmallest(8, "Due Date")
 
     # --- AP Due upcoming (not paid & due within next 15 days) ---
     ap_pending = ap_df[
         (ap_df["Payment Status"].astype(str).str.lower() == "not paid")
         & (ap_df["Due Date"].notnull())
-        & (ap_df["Due Date"] > today)
+        & (ap_df["Due Date"] >= today)
         & (ap_df["Due Date"] <= (today + timedelta(days=15)))
     ].copy()
     ap_pending["Days Remaining"] = (ap_pending["Due Date"] - today).dt.days
+    ap_pending["Days Remaining"] = ap_pending["Days Remaining"].apply(
+        lambda days: "today" if days == 0 else days
+    )
     top_4_ap = ap_pending.nsmallest(8, "Due Date")
 
     return {"AR_Due": top_4_ar, "AP_Due": top_4_ap, "AR_df": ar_df, "AP_df": ap_df}
