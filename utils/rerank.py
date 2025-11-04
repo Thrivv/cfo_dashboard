@@ -1,43 +1,31 @@
-"""Reranking utilities for document retrieval."""
+"""Reranking using Hugging Face CrossEncoder (direct)."""
+from sentence_transformers import CrossEncoder
 
-from flashrank.Ranker import Ranker, RerankRequest
-
-# Initialize the FlashRank reranker.
-# The default model is 'ms-marco-MiniLM-L-12-v2', a fast and efficient option.
-# You can choose a different model if needed, such as 'rank-T5-flan' for higher accuracy.
-ranker = Ranker()
-
+# Download directly from Hugging Face
+ranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 def rerank(query: str, docs: list[str], top_n: int = 3) -> list[str]:
-    """
-    Rerank documents using a local FlashRank model.
-
-    Args:
-        query (str): The search query.
-        docs (list[str]): A list of documents to be reranked.
-        top_n (int): The number of top documents to return.
-
-    Returns:
-        list[str]: The reranked list of documents.
-    """
     if not docs:
         return []
+    pairs = [(query, doc) for doc in docs]
+    scores = ranker.predict(pairs)
+    sorted_docs = [doc for _, doc in sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)]
+    return sorted_docs[:top_n]
 
-    # Prepare the documents for the reranker.
-    # FlashRank expects a list of dictionaries with 'text' and an optional 'meta' key.
-    passages = [{'text': doc} for doc in docs]
+# ---------------------------------------------------------------------------
+# Example usage (for quick local test)
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    test_query = "What is the capital of France?"
+    test_docs = [
+        "The Eiffel Tower is located in Paris.",
+        "France is a country in Europe.",
+        "The capital of France is Paris.",
+        "Paris is a city known for its art museums."
+    ]
 
-    # Create the rerank request.
-    rerank_request = RerankRequest(
-        query=query,
-        passages=passages
-    )
-
-    # Perform the reranking.
-    # The `rerank()` method returns a list of dictionaries, sorted by relevance score.
-    results = ranker.rerank(rerank_request)
-
-    # Return the content of the top_n documents.
-    # FlashRank automatically sorts the results for you.
-    return [result['text'] for result in results[:top_n]]
-
+    reranked_docs = rerank(test_query, test_docs, top_n=2)
+    print(f"Query: {test_query}")
+    print("Reranked Documents:")
+    for doc in reranked_docs:
+        print(f"- {doc}")

@@ -24,6 +24,7 @@ def suggest_questions():
         "Create a forecast for HR department",
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
         "What are the upcoming invoices?",
+        "What are the overdue invoices",
         "What are the retail system services and Card schemes regulations",
     ]
 

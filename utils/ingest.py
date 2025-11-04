@@ -1,8 +1,9 @@
-"""Data ingestion utilities for the CFO dashboard."""
+"""Data ingestion utilities for the CFO dashboard — Enhanced version with typed payloads and Qdrant indexes."""
 
 import os
 import sys
 import uuid
+from datetime import datetime
 
 import pandas as pd
 from qdrant_client import QdrantClient, models
@@ -24,117 +25,164 @@ from utils.config import (
 from utils.pipeline import ingest_document
 
 
-def ingest_csv_to_qdrant_enhanced(
-    file_path: str,
-    collection_name: str,
-    client: QdrantClient,
-    embedding_model: SentenceTransformer,
-):
-    """
-    Reads a CSV file, chunks each row with rich context, generates embeddings,
-    and ingests them into Qdrant with specific payload fields for filtering.
-    """
+# ---------------------------------------------------------------------------
+# Utility Functions
+# ---------------------------------------------------------------------------
+
+def epoch_from_date_str(date_str: str):
+    """Convert string date to Unix epoch for numeric filtering."""
+    if not date_str or str(date_str).lower() in ("nan", "none", ""):
+        return None
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d-%b-%Y", "%d %b %Y"):
+        try:
+            dt = datetime.strptime(str(date_str), fmt)
+            return int(dt.timestamp())
+        except Exception:
+            continue
+    try:
+        return int(datetime.fromisoformat(str(date_str)).timestamp())
+    except Exception:
+        return None
+
+
+def ensure_collection_and_indexes(client: QdrantClient, collection_name: str, embedding_dim: int):
+    """Ensure the collection exists and has necessary payload indexes."""
+    try:
+        client.get_collection(collection_name=collection_name)
+        print(f"Collection '{collection_name}' already exists.")
+    except Exception:
+        print(f"Creating collection '{collection_name}' with vector size {embedding_dim}...")
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(size=embedding_dim, distance=models.Distance.COSINE),
+        )
+
+    # Create common payload indexes
+    index_fields = {
+        "payment_status_keyword": "keyword",
+        "invoice_no": "keyword",
+        "doc_name": "keyword",
+        "amount_value": "float",
+        "due_date_epoch": "integer",
+    }
+
+    for field, schema in index_fields.items():
+        try:
+            client.create_payload_index(collection_name=collection_name, field_name=field, field_schema=schema)
+            print(f"✅ Created payload index on '{field}' for '{collection_name}'.")
+        except Exception as e:
+            # Already exists or other non-critical error
+            print(f"ℹ️ Could not create payload index '{field}' for '{collection_name}': {e}")
+
+
+def ingest_csv_row_as_point(row, file_path, embedding_model):
+    """Convert one CSV row into a Qdrant PointStruct with typed payloads."""
+    # Determine name field
+    name_field = "Supplier Name" if "Supplier Name" in row else "Customer Name"
+    name = row.get(name_field, "")
+
+    # Build semantic text chunk
+    text_chunk = (
+        f"Invoice record: Invoice No. {row.get('Invoice No.', '')}, issued on {row.get('Invoice Date', '')}, "
+        f"from {name} for {row.get('Service Description', '')}. "
+        f"The amount is {row.get('Amount (AED)', '')} AED. "
+        f"The payment status is '{row.get('Payment Status', '')}' and the due date was '{row.get('Due Date', '')}'."
+    )
+
+    embedding = embedding_model.encode(text_chunk).tolist()
+    point_id = str(uuid.uuid4())
+
+    # Build typed payload
+    payload = row.to_dict()
+    payload["source_file"] = file_path
+    payload["content"] = text_chunk
+    payload["doc_name"] = os.path.basename(file_path)
+    payload["invoice_no"] = str(row.get("Invoice No.", "")).strip()
+
+    # Normalize amount
+    try:
+        payload["amount_value"] = float(str(row.get("Amount (AED)", "")).replace(",", "").strip() or 0.0)
+    except Exception:
+        payload["amount_value"] = None
+
+    # Normalize payment status
+    payload["payment_status_keyword"] = str(row.get("Payment Status", "")).strip().lower()
+
+    # Add epoch date fields
+    payload["due_date_epoch"] = epoch_from_date_str(row.get("Due Date", ""))
+    payload["paid_date_epoch"] = epoch_from_date_str(row.get("Paid Date", ""))
+
+    return models.PointStruct(id=point_id, vector=embedding, payload=payload)
+
+
+def ingest_csv_to_qdrant_enhanced(file_path, collection_name, client, embedding_model):
+    """Read CSV, prepare points, ensure collection & indexes, and ingest."""
     try:
         df = pd.read_csv(file_path)
         embedding_dim = embedding_model.get_sentence_embedding_dimension()
 
-        try:
-            client.get_collection(collection_name=collection_name)
-        except Exception:
-            print(f"Creating collection '{collection_name}' with vector size {embedding_dim}...")
-            client.create_collection(
-                collection_name=collection_name,
-                vectors_config=models.VectorParams(
-                    size=embedding_dim, distance=models.Distance.COSINE
-                ),
-            )
+        ensure_collection_and_indexes(client, collection_name, embedding_dim)
 
         points = []
         for _, row in df.iterrows():
-            # Create a rich text chunk for semantic search.
-            # Explicitly include important information like due date and payment status.
-            if "Supplier Name" in row:
-                name_field = "Supplier Name"
-                name = row[name_field]
-            else:
-                name_field = "Customer Name"
-                name = row[name_field]
-
-            text_chunk = (
-                f"Invoice record: Invoice No. {row['Invoice No.']}, issued on {row['Invoice Date']}, "
-                f"from {name} for {row['Service Description']}. "
-                f"The amount is {row['Amount (AED)']} AED. "
-                f"The payment status is '{row['Payment Status']}' and the due date was '{row['Due Date']}'and status '{row['Status']}'."
-            )
-
-            embedding = embedding_model.encode(text_chunk).tolist()
-
-            # Use the entire row as a payload, including a normalized payment status.
-            payload = row.to_dict()
-            payload["source_file"] = file_path
-            payload["content"] = text_chunk
-
-            # Qdrant filters work best on well-defined types. Normalize payment status.
-            payload["payment_status_keyword"] = str(row["Payment Status"]).strip().lower()
-
-            # Create a unique ID for each point
-            point_id = str(uuid.uuid4())
-
-            points.append(
-                models.PointStruct(
-                    id=point_id,
-                    vector=embedding,
-                    payload=payload,
-                )
-            )
+            point = ingest_csv_row_as_point(row, file_path, embedding_model)
+            points.append(point)
 
         print(f"Ingesting {len(points)} points into '{collection_name}'...")
         client.upsert(collection_name=collection_name, points=points)
-        print(f"Ingestion for '{collection_name}' completed.")
+        print(f"✅ Ingestion for '{collection_name}' completed.")
 
     except Exception as e:
-        print(f"An error occurred during ingestion for {file_path}: {e}")
+        print(f"❌ Error during ingestion for {file_path}: {e}")
 
+
+# ---------------------------------------------------------------------------
+# Master Ingestion Entry Point
+# ---------------------------------------------------------------------------
 
 def ingest_all_data():
-    """Initializes clients and ingests all data sources."""
-
-    # Initialize Qdrant client and embedding model
+    """Initialize client/model and ingest all CFO datasets into Qdrant."""
     qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
-    # Ingest AP Invoice using the new enhanced CSV functions
+    # --- Ingest AP Invoices ---
     ap_invoice_path = "data/AP_Invoice.csv"
-    ingest_csv_to_qdrant_enhanced(
-        ap_invoice_path, AP_INVOICE_COLLECTION, qdrant_client, embedding_model
-    )
-    print("✅ AP Invoice ingested")
+    ingest_csv_to_qdrant_enhanced(ap_invoice_path, AP_INVOICE_COLLECTION, qdrant_client, embedding_model)
+    print("✅ AP Invoices ingested\n")
 
-    # Ingest AR Invoice using the new enhanced CSV function
+    # --- Ingest AR Invoices ---
     ar_invoice_path = "data/AR_Invoice.csv"
-    ingest_csv_to_qdrant_enhanced(
-        ar_invoice_path, AR_INVOICE_COLLECTION, qdrant_client, embedding_model
-    )
-    print("✅ AR Invoice ingested")
+    ingest_csv_to_qdrant_enhanced(ar_invoice_path, AR_INVOICE_COLLECTION, qdrant_client, embedding_model)
+    print("✅ AR Invoices ingested\n")
 
-    # Ingest Regulations PDF using the existing pipeline
+    # --- Ingest Regulations PDF ---
     regulations_path = "data/RPSR_RPSCSR_UAE.pdf"
-    regulations_metadata = {"doc_name": "RPS_CSR_ENG.pdf", "source_type": "regulation"}
+    regulations_metadata = {"doc_name": "RPSR_RPSCSR_UAE.pdf", "source_type": "regulation"}
     ingest_document(regulations_path, regulations_metadata, REGULATIONS_COLLECTION)
-    print("✅ Regulations PDF ingested")
+    print("✅ Regulations PDF ingested\n")
 
-    # Ingest PO T&C PDF using the existing pipeline
+    # --- Ingest PO Terms & Conditions PDF ---
     po_tc_path = "data/PO_T&C.pdf"
     po_tc_metadata = {"doc_name": "PO_T&C.pdf", "source_type": "terms_and_conditions"}
     ingest_document(po_tc_path, po_tc_metadata, PO_TC_COLLECTION)
-    print("✅ PO T&C PDF ingested")
+    print("✅ PO T&C PDF ingested\n")
 
-    # Ingest Rebate PDF using the existing pipeline
-    rebate_path = "data/Rebate.pdf"
-    rebate_metadata = {"doc_name": "Rebate.pdf", "source_type": "rebate"}
-    ingest_document(rebate_path, rebate_metadata, REBATE_COLLECTION)
-    print("✅ Rebate PDF ingested")
+    # --- Ingest Rebate PDFs ---
+    rebate_dir = "data/Rebate"
+    if os.path.exists(rebate_dir):
+        for rebate_file in os.listdir(rebate_dir):
+            if rebate_file.endswith(".pdf"):
+                rebate_path = os.path.join(rebate_dir, rebate_file)
+                rebate_metadata = {"doc_name": rebate_file, "source_type": "rebate"}
+                ingest_document(rebate_path, rebate_metadata, REBATE_COLLECTION)
+                print(f"✅ Rebate PDF {rebate_file} ingested")
+    else:
+        print("⚠️ No rebate directory found — skipping.")
 
+
+# ---------------------------------------------------------------------------
+# Script Entry
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     ingest_all_data()

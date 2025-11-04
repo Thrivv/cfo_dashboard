@@ -30,75 +30,70 @@ def query_rebate_collection(query: str) -> List[Dict[str, any]]:
     query_vector = embed_texts([query])[0]
 
     # Search Qdrant collection
-    search_results = search(REBATE_COLLECTION, query_vector, top_k=5)
+    search_results = search(REBATE_COLLECTION, query_vector, top_k=30)
 
-    # Extract context from search results
-    context_parts = []
+    # Group chunks by document name
+    documents = {}
     for r in search_results:
         if "chunk_id" in r.payload:
             metadata = get_metadata(r.payload["chunk_id"])
-            if metadata and "content" in metadata:
-                context_parts.append(metadata["content"])
+            if metadata and "content" in metadata and "doc_name" in metadata:
+                doc_name = metadata["doc_name"]
+                if doc_name not in documents:
+                    documents[doc_name] = []
+                documents[doc_name].append(metadata["content"])
 
-    context = "\n---\n".join(filter(None, context_parts))
-
-    if not context:
+    if not documents:
         return []
 
-    # Strict extraction prompt
-    prompt = f"""
-You are an information extraction engine.
-Extract ONLY information that is explicitly written in the text below.
-Do NOT infer or guess.
-If something does not appear, return null for that field.
+    extracted_data = []
+    for doc_name, chunks in documents.items():
+        context = "\n---\n".join(chunks)
 
-Look for exact phrases such as:
- - "Company Name : <name>"
- - "There will be a discount of <number>%"
- - "Discount of <number>% if paid before"
- - "<number>. <company name> – <number>% discount if paid before due date"
+        # Strict extraction prompt
+        prompt = f"""You are an information extraction engine.
+Your task is to extract the supplier name and discount percentage from the provided text.
 
-Return a valid JSON array with this structure:
+The supplier name is explicitly mentioned with the label \"Supplier Name:\".
+The discount information can be found in a \"DISCOUNT\" section or under a numbered clause like \"4.4\".
 
-[
-  {{
-    "supplier_name": "<exact supplier name or null>",
-    "discount_percentage": "<exact discount (with %) or null>"
-  }}
-]
+Look for the following exact patterns:
+- \"Supplier Name: <The supplier name>\"
+- \"DISCOUNT: There will be a discount of <number>% if paid before Due date\"
+- \"4.4 There will be a <number>% discount if paid before due date\"
 
-If multiple suppliers or discounts appear, return each as a separate object in the array.
+Return a valid JSON object with this structure:
+{{
+  "supplier_name": "<exact supplier name or null>",
+  "discount_percentage": "<exact discount (with %) or null>"
+}}
+
+Do NOT infer or guess. If the discount information is not explicitly in the text, return null for that field. but Definitely there will be supplier name.
+It is very important to extract both the supplier name and the discount percentage.
 
 Context:
 {context}
 """
 
-    # Call the LLM
-    llm_response = call_vllm(prompt)
+        # Call the LLM
+        llm_response = call_vllm(prompt)
 
-    # Parse LLM JSON safely
-    try:
-        json_start = llm_response.find('[')
-        json_end = llm_response.rfind(']') + 1
-        if json_start != -1 and json_end > json_start:
-            json_string = llm_response[json_start:json_end]
-            extracted = json.loads(json_string)
-        else:
-            return []
-    except json.JSONDecodeError:
-        return []
+        # Parse LLM JSON safely
+        try:
+            json_start = llm_response.find('{')
+            json_end = llm_response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                json_string = llm_response[json_start:json_end]
+                extracted = json.loads(json_string)
+                # Add doc_name to the extracted data
+                extracted["document_name"] = doc_name
+                extracted_data.append(extracted)
+            else:
+                continue
+        except json.JSONDecodeError:
+            continue
 
-    # Validate that values actually appear in context
-    for item in extracted:
-        supplier = item.get("supplier_name")
-        discount = item.get("discount_percentage")
-
-        if supplier and supplier.lower() not in context.lower():
-            item["supplier_name"] = None
-        if discount and discount.strip('%') not in context:
-            item["discount_percentage"] = None
-
-    return extracted
+    return extracted_data
 
 if __name__ == '__main__':
     import argparse
