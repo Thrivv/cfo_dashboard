@@ -5,70 +5,119 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 
+import pandas as pd
+from datetime import timedelta
+
 def generate_due_tables():
-    """Loads AR/AP CSVs, parses dates/amounts and returns:
-    - AR_Due: not-paid AR invoices due within next 15 days (sorted earliest first)
-    - AP_Due: not-paid AP invoices due within next 15 days (sorted earliest first)
-    - AR_df: full AR dataframe (cleaned)
-    - AP_df: full AP dataframe (cleaned).
+    """
+    Loads AR/AP CSVs, cleans and filters them, and returns:
+    - AR_Due: not-paid AR invoices due within next 15 days (selected columns only)
+    - AP_Due: not-paid AP invoices due within next 15 days (selected columns only)
+    - AR_df: full cleaned AR dataframe
+    - AP_df: full cleaned AP dataframe
     """
     today = pd.to_datetime('today').normalize()
 
-    # Load AR and AP
+    # --- Load datasets ---
     ar_df = pd.read_csv("data/AR_Invoice.csv")
     ap_df = pd.read_csv("data/AP_Invoice.csv")
 
-    # --- Normalize column names (strip spaces) ---
+    # --- Normalize column names ---
     ar_df.columns = [c.strip() for c in ar_df.columns]
     ap_df.columns = [c.strip() for c in ap_df.columns]
 
-    # Convert date columns robustly
-    ar_df["Due Date"] = pd.to_datetime(ar_df.get("Due Date"), errors="coerce")
-    ar_df["Invoice Date"] = pd.to_datetime(ar_df.get("Invoice Date"), errors="coerce")
-    ar_df["Paid Date"] = pd.to_datetime(ar_df.get("Paid Date"), errors="coerce")
+    # --- Convert date columns ---
+    for df in [ar_df, ap_df]:
+        for col in ["Invoice Date", "Due Date", "Paid Date"]:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    ap_df["Due Date"] = pd.to_datetime(ap_df.get("Due Date"), errors="coerce")
-    ap_df["Invoice Date"] = pd.to_datetime(ap_df.get("Invoice Date"), errors="coerce")
-    ap_df["Paid Date"] = pd.to_datetime(ap_df.get("Paid Date"), errors="coerce")
+    # --- Ensure Amount column is numeric ---
+    for df in [ar_df, ap_df]:
+        if "Amount (AED)" in df.columns:
+            df["Amount (AED)"] = pd.to_numeric(df["Amount (AED)"], errors="coerce").fillna(0)
 
-    # Ensure Amount column is numeric
-    if "Amount (AED)" in ar_df.columns:
-        ar_df["Amount (AED)"] = pd.to_numeric(
-            ar_df["Amount (AED)"], errors="coerce"
-        ).fillna(0)
-    if "Amount (AED)" in ap_df.columns:
-        ap_df["Amount (AED)"] = pd.to_numeric(
-            ap_df["Amount (AED)"], errors="coerce"
-        ).fillna(0)
+    # --- AR upcoming dues (within next 15 days & not paid) ---
+    if "Payment Status" in ar_df.columns and "Due Date" in ar_df.columns:
+        ar_due_filter = (
+            (ar_df["Payment Status"].astype(str).str.lower() == "not paid")
+            & (ar_df["Due Date"].notnull())
+            & (ar_df["Due Date"] >= today)
+            & (ar_df["Due Date"] <= (today + timedelta(days=15)))
+        )
+        ar_due = ar_df[ar_due_filter].copy()
+        ar_due["Days Remaining"] = (ar_due["Due Date"] - today).dt.days
+        ar_due["Days Remaining"] = ar_due["Days Remaining"].apply(
+            lambda d: "today" if d == 0 else d
+        )
+        ar_due = ar_due.nsmallest(8, "Due Date")
+    else:
+        ar_due = pd.DataFrame()
 
-    # --- AR Due upcoming (not paid & due within next 15 days) ---
-    ar_pending_filter = (
-        (ar_df["Payment Status"].astype(str).str.lower() == "not paid")
-        & (ar_df["Due Date"].notnull())
-        & (ar_df["Due Date"] >= today)
-        & (ar_df["Due Date"] <= (today + timedelta(days=15)))
-    )
-    ar_pending = ar_df[ar_pending_filter].copy()
-    ar_pending["Days Remaining"] = (ar_pending["Due Date"] - today).dt.days
-    ar_pending["Days Remaining"] = ar_pending["Days Remaining"].apply(
-        lambda days: "today" if days == 0 else days
-    )
-    top_4_ar = ar_pending.nsmallest(8, "Due Date")
+    # --- AP upcoming dues (within next 15 days & not paid) ---
+    if "Payment Status" in ap_df.columns and "Due Date" in ap_df.columns:
+        ap_due_filter = (
+            (ap_df["Payment Status"].astype(str).str.lower() == "not paid")
+            & (ap_df["Due Date"].notnull())
+            & (ap_df["Due Date"] >= today)
+            & (ap_df["Due Date"] <= (today + timedelta(days=15)))
+        )
+        ap_due = ap_df[ap_due_filter].copy()
+        ap_due["Days Remaining"] = (ap_due["Due Date"] - today).dt.days
+        ap_due["Days Remaining"] = ap_due["Days Remaining"].apply(
+            lambda d: "today" if d == 0 else d
+        )
+        ap_due = ap_due.nsmallest(8, "Due Date")
+    else:
+        ap_due = pd.DataFrame()
 
-    # --- AP Due upcoming (not paid & due within next 15 days) ---
-    ap_pending = ap_df[
-        (ap_df["Payment Status"].astype(str).str.lower() == "not paid")
-        & (ap_df["Due Date"].notnull())
-        & (ap_df["Due Date"] >= today)
-        & (ap_df["Due Date"] <= (today + timedelta(days=15)))
-    ].copy()
-    ap_pending["Days Remaining"] = (ap_pending["Due Date"] - today).dt.days
-    ap_pending["Days Remaining"] = ap_pending["Days Remaining"].apply(
-        lambda days: "today" if days == 0 else days
-    )
-    top_4_ap = ap_pending.nsmallest(8, "Due Date")
+    # --- Select only required columns for output ---
+    ar_columns = [
+        "Invoice No.",
+        "Invoice Date",
+        "Due Date",
+        "Customer Name",
+        "Service Description",
+        "Amount (AED)",
+        "Payment Status",
+        "VAT TRN",
+        "VAT %",
+        "Status",
+    ]
 
-    return {"AR_Due": top_4_ar, "AP_Due": top_4_ap, "AR_df": ar_df, "AP_df": ap_df}
+    ap_columns = [
+        "Invoice No.",
+        "Invoice Date",
+        "Due Date",
+        "Supplier Name",
+        "Service Description",
+        "Amount (AED)",
+        "Discount",
+        "Discount Note",
+        "Final Amount with Discount",
+        "Payment Status",
+        "VAT TRN",
+        "VAT %",
+        "Status",
+    ]
+
+    # Keep only columns that actually exist in each dataset
+    ar_due = ar_due[[col for col in ar_columns if col in ar_due.columns]]
+    ap_due = ap_due[[col for col in ap_columns if col in ap_due.columns]]
+
+    return {
+        "AR_Due": ar_due,
+        "AP_Due": ap_due,
+        "AR_df": ar_df,
+        "AP_df": ap_df,
+    }
+
+
+
+def get_raw_ap_rebate_data():
+    """Reads and returns the raw AP_Invoice_rebate.csv data."""
+    ap_r = pd.read_csv("data/AP_Invoice_rebate.csv")
+    return ap_r
 
 
 def get_correct_time_payers(ar_df, top_n=3):
@@ -249,55 +298,99 @@ def get_invoice_summary(ar_df, ap_df):
     return {"ar_total": ar_total, "ap_total": ap_total, "summary_df": summary_df}
 
 
+import pandas as pd
+from datetime import datetime
+
 def view_risk_invoices(high_risk_invoices):
-    """Returns a formatted dataframe of high-risk invoices for display in Streamlit.
-    Shows Invoice No., (Customer/Supplier Name), Service Description, Amount (AED), Due Date, Overdue Days.
+    """
+    Returns a formatted dataframe of high-risk invoices for display in Streamlit.
+
+    For AR invoices:
+        Shows: Invoice No., Invoice Date, Due Date, Customer Name, Service Description,
+               Amount (AED), Payment Status, VAT TRN, VAT %, Status.
+
+    For AP invoices:
+        Shows: Invoice No., Invoice Date, Due Date, Supplier Name, Service Description,
+               Amount (AED), Payment Status, VAT TRN, VAT %, Status,
+               Penalty, Penalty Note, Final Amount with Penalty.
     """
     if high_risk_invoices is None or high_risk_invoices.empty:
         return pd.DataFrame()
 
     df = high_risk_invoices.copy()
 
-    # Prefer Customer Name or Supplier Name
-    if "Customer Name" in df.columns:
-        name_col = "Customer Name"
-    elif "Supplier Name" in df.columns:
-        name_col = "Supplier Name"
+    # --- Detect AR vs AP ---
+    if "Supplier Name" in df.columns:
+        invoice_type = "AP"
+    elif "Customer Name" in df.columns:
+        invoice_type = "AR"
     else:
-        name_col = None
+        invoice_type = "Unknown"
 
-    display_columns = ["Invoice No."]
-    if name_col:
-        display_columns.append(name_col)
-    display_columns += ["Service Description", "Amount (AED)", "Due Date"]
+    # --- Convert date columns robustly ---
+    for col in ["Invoice Date", "Due Date"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    # Add Overdue Days if available
-    if "Overdue Days" in df.columns:
-        display_columns.append("Overdue Days")
+    # --- Ensure Amount column numeric ---
+    if "Amount (AED)" in df.columns:
+        df["Amount (AED)"] = pd.to_numeric(df["Amount (AED)"], errors="coerce").fillna(0).round(2)
+
+    # --- Safely compute Overdue Days ---
+    if "Due Date" in df.columns:
+        today = pd.Timestamp(datetime.now().date())
+        valid_dates = df["Due Date"].notnull()
+        df.loc[valid_dates, "Overdue Days"] = (today - df.loc[valid_dates, "Due Date"]).dt.days
+        df.loc[df["Overdue Days"] < 0, "Overdue Days"] = 0
     else:
-        # compute Overdue Days if Due Date present
-        today = datetime.now()
-        if "Due Date" in df.columns:
-            df["Overdue Days"] = (
-                today - pd.to_datetime(df["Due Date"], errors="coerce")
-            ).dt.days
+        df["Overdue Days"] = None
 
-            display_columns.append("Overdue Days")
-
-    # Sort by Overdue Days if the column exists
+    # --- Sort by Overdue Days if available ---
     if "Overdue Days" in df.columns:
         df = df.sort_values(by="Overdue Days", ascending=False)
 
-    # Format Due Date and Amount for display
-    df["Due Date"] = pd.to_datetime(df.get("Due Date"), errors="coerce").dt.date
-    df["Amount (AED)"] = (
-        pd.to_numeric(df.get("Amount (AED)"), errors="coerce").fillna(0).round(2)
-    )
+    # --- Format dates for display (convert back to date only) ---
+    for col in ["Invoice Date", "Due Date"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
 
-    # Ensure selected columns exist
+    # --- Choose columns to display ---
+    if invoice_type == "AP":
+        display_columns = [
+            "Invoice No.",
+            "Invoice Date",
+            "Due Date",
+            "Supplier Name",
+            "Service Description",
+            "Amount (AED)",
+            "Penalty",
+            "Penalty Note",
+            "Final Amount with Penalty",
+            "Payment Status",
+            "VAT TRN",
+            "VAT %",
+            "Status",
+            
+        ]
+    else:  # AR
+        display_columns = [
+            "Invoice No.",
+            "Invoice Date",
+            "Due Date",
+            "Customer Name",
+            "Service Description",
+            "Amount (AED)",
+            "Payment Status",
+            "VAT TRN",
+            "VAT %",
+            "Status",
+        ]
+
+    # --- Keep only columns that exist ---
     display_columns = [c for c in display_columns if c in df.columns]
 
     return df[display_columns].reset_index(drop=True)
+
 
 
 if __name__ == "__main__":

@@ -24,15 +24,15 @@ except ImportError:
         REBATE_COLLECTION,
     )
 
-client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 
 def init_collection(collection_name: str, dim: int):
     """Create collection if not exists."""
     try:
-        client.get_collection(collection_name=collection_name)
+        qdrant_client.get_collection(collection_name=collection_name)
     except Exception:
-        client.create_collection(
+        qdrant_client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
         )
@@ -44,10 +44,10 @@ def upsert_embeddings(
     """Upserts embeddings to Qdrant in batches."""
     for i in range(0, len(points), batch_size):
         batch = points[i : i + batch_size]
-        client.upsert(collection_name=collection_name, points=batch)
+        qdrant_client.upsert(collection_name=collection_name, points=batch)
 
 
 def search(collection_name: str, query_vector: list[float], top_k: int = 5):
-    return client.search(
+    return qdrant_client.search(
         collection_name=collection_name, query_vector=query_vector, limit=top_k
     )

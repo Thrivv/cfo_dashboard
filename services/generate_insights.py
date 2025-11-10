@@ -35,7 +35,7 @@ Based on these overdue AR invoices:
 {top_ar_overdue}
 
 Generate exactly 2 AR warnings, each max 3 lines.
-Include customer, invoice number, overdue days, Article reference, and why it matters.
+Include customer, invoice number, overdue days, Article reference, or if any penalty, penalty note and why it matters.
 """
     ar_warnings = query_rag(ar_warning_query, template_name="ar_warning_summary")
 
@@ -44,7 +44,7 @@ Based on these overdue AP invoices:
 {top_ap_overdue}
 
 Generate exactly 2 AP warnings, each max 3 lines.
-Include supplier, invoice number, overdue days, PO T&C clause/regulation, and why it matters.
+Include supplier, invoice number, overdue days, penalty, penalty note, amount and amount with penalty comparison  PO T&C clause/regulation, and why it matters.
 """
     ap_warnings = query_rag(ap_warning_query, template_name="ap_warning_summary")
 
@@ -54,7 +54,7 @@ Include supplier, invoice number, overdue days, PO T&C clause/regulation, and wh
     ar_opps = query_rag(ar_opportunity_query, template_name="ar_opportunity_summary")
 
     ap_opportunity_query = (
-        "Generate up to 2 AP opportunities, each max 3 lines, with PO T&C references."
+        "Generate up to 2 AP opportunities, each max 3 lines, with discount, discount note and comparison of amount and amount with discount or PO T&C references."
     )
     ap_opps = query_rag(ap_opportunity_query, template_name="ap_opportunity_summary")
 

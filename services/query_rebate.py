@@ -37,8 +37,8 @@ def query_rebate_collection(query: str) -> List[Dict[str, any]]:
     for r in search_results:
         if "chunk_id" in r.payload:
             metadata = get_metadata(r.payload["chunk_id"])
-            if metadata and "content" in metadata and "doc_name" in metadata:
-                doc_name = metadata["doc_name"]
+            if metadata and "content" in metadata and "source" in metadata:
+                doc_name = metadata["source"]
                 if doc_name not in documents:
                     documents[doc_name] = []
                 documents[doc_name].append(metadata["content"])
