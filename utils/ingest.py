@@ -22,7 +22,6 @@ from utils.config import (
     REGULATIONS_COLLECTION,
     REBATE_COLLECTION,
 )
-from utils.pipeline import ingest_document
 
 
 # ---------------------------------------------------------------------------

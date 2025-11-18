@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.embedding import embed_texts
 from utils.vectorstore_qdrant import search
-from utils.llm_client import call_vllm
+from utils.llm_client import call_llm
 from qdrant_client import QdrantClient
 
 try:

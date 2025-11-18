@@ -11,7 +11,7 @@ from services.due_tables import (
     get_top_ap_overdue,
     get_top_ar_overdue,
 )
-from utils.pipeline import query_rag
+from utils.pipeline import query_insights
 
 
 def generate_insights():
@@ -23,40 +23,25 @@ def generate_insights():
     ap_df = due_data["AP_df"]
 
     # Get top on-time payers
-    top_payers = get_correct_time_payers(ar_df)
+    top_payers_ar = get_correct_time_payers(ar_df)
 
     # Get top overdue invoices for warnings
     top_ar_overdue = get_top_ar_overdue(ar_df, top_n=2)
     top_ap_overdue = get_top_ap_overdue(ap_df, top_n=2)
 
     # --- Warnings Generation ---
-    ar_warning_query = f"""
-Based on these overdue AR invoices:
-{top_ar_overdue}
+    ar_warning_query = f"Based on these overdue AR invoices: {top_ar_overdue}"
+    ar_warnings = query_insights(ar_warning_query, top_ar_overdue, "ar_warning_summary")
 
-Generate exactly 2 AR warnings, each max 3 lines.
-Include customer, invoice number, overdue days, Article reference, or if any penalty, penalty note and why it matters.
-"""
-    ar_warnings = query_rag(ar_warning_query, template_name="ar_warning_summary")
-
-    ap_warning_query = f"""
-Based on these overdue AP invoices:
-{top_ap_overdue}
-
-Generate exactly 2 AP warnings, each max 3 lines.
-Include supplier, invoice number, overdue days, penalty, penalty note, amount and amount with penalty comparison  PO T&C clause/regulation, and why it matters.
-"""
-    ap_warnings = query_rag(ap_warning_query, template_name="ap_warning_summary")
+    ap_warning_query = f"Based on these overdue AP invoices: {top_ap_overdue}"
+    ap_warnings = query_insights(ap_warning_query, top_ap_overdue, "ap_warning_summary")
 
     # --- Opportunities Generation ---
-    (f"Top correct-time paying customers:\n{top_payers.to_string(index=False)}")
-    ar_opportunity_query = "Generate up to 2 AR opportunities, each max 3 lines, with regulation references."
-    ar_opps = query_rag(ar_opportunity_query, template_name="ar_opportunity_summary")
+    ar_opportunity_query = "Based on the following data of top on-time paying customers, generate up to 2 AR opportunities. Each opportunity must be based on a real invoice from the data. Do not invent any details like invoice numbers or amounts. Each opportunity should be a maximum of 3 lines."
+    ar_opps = query_insights(ar_opportunity_query, top_payers_ar.to_string(index=False), "ar_opportunity_summary")
 
-    ap_opportunity_query = (
-        "Generate up to 2 AP opportunities, each max 3 lines, with discount, discount note and comparison of amount and amount with discount or PO T&C references."
-    )
-    ap_opps = query_rag(ap_opportunity_query, template_name="ap_opportunity_summary")
+    ap_opportunity_query = "Generate up to 2 AP opportunities, each max 3 lines, with PO T&C or discount references."
+    ap_opps = query_insights(ap_opportunity_query, ap_df.to_string(index=False), "ap_opportunity_summary")
 
     final_output = {
         "warnings": {"AR": ar_warnings, "AP": ap_warnings},

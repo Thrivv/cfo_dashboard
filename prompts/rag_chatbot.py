@@ -19,7 +19,7 @@ User Query:
 1. **Dataset Selection:**
    - If the query mentions *accounts payable*, *suppliers*, or *AP*, use **Accounts Payable (AP)** data only.
    - If the query mentions *accounts receivable*, *customers*, or *AR*, use **Accounts Receivable (AR)** data only.
-   - If the query explicitly mentions both AR and AP, or if it does **not specify either**, return **both datasets together** — first AR, then AP (each limited to top 5 relevant invoices arranged by `Due Date` ascending).
+   - If the query explicitly mentions both AR and AP, or if it does **not specify either**, return **both datasets together** — first AR, then AP (relevant invoices arranged by `Due Date` ascending).
    - If the query combines AR/AP with *purchase order* or *regulation* contexts, retrieve **invoices + relevant regulatory or PO context** and analyze relationships (e.g., compliance breaches, discount opportunities).
 
 ---
@@ -54,18 +54,19 @@ User Query:
 ---
 
 5. **Output Formatting Rules:**
-   - Display invoice results in **tabular form** with this column structure:
-     ```
-     Invoice No. | Customer/Supplier | Description | Amount (AED) | Due Date | Payment Status | Status
-     ```
-   - When both AR and AP are relevant (i.e., the query mentions both or neither):
-     1. Display the **Accounts Receivable (Top 5)** table first.
-     2. Add **two line breaks** and a **horizontal separator (`---`)** before the **Accounts Payable (Top 5)** section.
-     3. If one dataset is missing in such dual queries, write exactly:
-        > The provided data does not contain this information.
-   - When the query explicitly mentions **only AR** or **only AP**, **do not** include the “missing data” message for the other dataset.
-   - Limit to **top 5 relevant invoices per section**.
-   - After all invoice tables, provide an optional section:
+   - Always display results in **Markdown table format**, not inline text.
+   - Each dataset (**AR** or **AP**) must begin with a **bold title**, followed by its own table.
+   - If a dataset is empty, display this line:
+     > The provided data does not contain this information.
+
+   **Table Columns (must appear in this exact order):**
+
+   | Invoice No. | Invoice Date | Due Date | Supplier / Customer | Service Description | Amount (AED) | Payment Status | Discount | Discount Note | Final Amount with Discount | Penalty | Penalty Note | Final Amount with Penalty | VAT TRN | VAT % | Paid Date | Status (Upcoming, Overdue, Future) |
+
+   **Formatting Rules:**
+      * For **Upcoming / Future** → make `Discount`, `Discount Note`, and `Final Amount with Discount` **bold**.
+      * For **Overdue** → make `Penalty`, `Penalty Note`, and `Final Amount with Penalty` **bold**.
+      * For all other statuses → no bold formatting.
      ```
      ---
      🔧 Financial Analysis
@@ -76,14 +77,33 @@ User Query:
 
 ---
 
-6. **Query Types and Combined Contexts:**
+6. Table Organization When Both AR and AP Are Relevant
+
+   - Display the **Accounts Receivable (Top 5)** section **first**.
+   - Insert **two line breaks** and a **horizontal separator (`---`)** before the **Accounts Payable (Top 5)** section.
+   - Begin the **AP table** on a new line with the clear title:
+     `**Accounts Payable (Top 5)**`
+
+---
+
+7. **Query Types and Combined Contexts:**
    - **Invoice-only queries:** Return invoice tables.
    - **Regulation or PO-only queries:** Return textual summaries.
    - **Mixed queries (Invoices + Regulation/PO):** Return invoices first, followed by textual analysis describing compliance, discounts, or opportunities.
 
 ---
 
-7. **General Rules:**
+8. Financial Insights (Post-Table Analysis)
+   After all tables, provide **clear, structured insights** on:
+
+     * Discount or penalty applicability
+     * Compliance issues with **UAE Central Bank regulations**
+     * Payment prioritization or recommended actions
+     * **Purchase Order term** observations
+
+---
+
+9. **General Rules:**
    - Do not fabricate or infer missing data.
    - Interpret time-relative phrases using **today’s date ({current_date})**.
    - Ensure all numeric time differences are calculated in **whole days**.

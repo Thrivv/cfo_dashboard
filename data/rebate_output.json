@@ -25,7 +25,7 @@
   },
   {
     "supplier_name": "Emirates Logistics FZC",
-    "discount_clause": "There will be a 4% discount if paid before due date",
+    "discount_clause": "4% discount if paid before due date",
     "discount": "4%",
     "penalty_clause": "0.5% penalty per full week or partial week of delay for late delivery",
     "penalty": "0.5%",
