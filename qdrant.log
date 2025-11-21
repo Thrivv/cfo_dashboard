@@ -1,0 +1,6 @@
+nohup: ignoring input
+error: unexpected argument '--host' found
+
+Usage: qdrant [OPTIONS]
+
+For more information, try '--help'.

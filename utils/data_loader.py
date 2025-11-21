@@ -87,6 +87,10 @@ class DataLoaderService:
             "Return on Assets (ROA)",
             "Inventory Value",
             "Inventory Turnover",
+            "Accounts Receivable (AR)",
+            "Accounts Payable (AP)",
+            "Days Sales Outstanding (DSO)",
+            "Days Payable Outstanding (DPO)",
         ]
 
         for col in numeric_columns:

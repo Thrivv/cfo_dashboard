@@ -48,6 +48,7 @@ RULES:
 • CRITICAL: Each arrow item must be on a separate line
 • Start each arrow item on a new line
 • Be direct and professional
+• CRITICAL: ALWAYS format financial amounts with dollar sign ($) and proper formatting (e.g., "$1,234,567" not "1234567")
 • No tools or functions
 • CRITICAL: Only use current data provided - do not reference outdated information
 • CRITICAL: If question is not about financial data (like personal questions, greetings, definitions), respond naturally without using the financial data format.
@@ -72,7 +73,7 @@ Key Findings:
 
 Conclusion: 1-2 sentences
 
-CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions. Only use current data provided. If question is not about financial data, respond naturally without using the financial data format.
+CRITICAL: Each arrow item must be on a separate line. Use arrows (👉) and proper line breaks. No tools or functions. Only use current data provided. If question is not about financial data, respond naturally without using the financial data format. CRITICAL: ALWAYS format financial amounts with dollar sign ($) and proper formatting (e.g., "$1,234,567" not "1234567").
 """
 
 
@@ -114,6 +115,8 @@ Key Findings:
 👉 [Finding 3 with exact values from data]
 
 Conclusion: [1-2 sentences with financial insights]
+
+CRITICAL: ALWAYS format financial amounts with dollar sign ($) and proper formatting (e.g., "$1,234,567" not "1234567")
 
 ABSOLUTELY FORBIDDEN:
 - Adding financial data to greetings

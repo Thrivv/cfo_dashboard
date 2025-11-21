@@ -39,44 +39,25 @@ def render():
     )
     st.plotly_chart(fig, use_container_width=True, key="invoice_summary")
 
-    st.metric(label="Account Payable", value=f"{summary_data['ap_total']/1e6:.1f}M AED")
+    st.metric(label="Account Payable", value=f"{summary_data['ap_total']:,} AED")
     st.metric(
-        label="Account Receivable", value=f"{summary_data['ar_total']/1e6:.1f}M AED"
+        label="Account Receivable", value=f"{summary_data['ar_total']:,} AED"
     )
 
     try:
         # Top section with risk score and invoice summary
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("AR Payment Delay Risk Score")
-            risk_data_ar = get_AR_risk_data(ar_df)
-
-            fig_1 = px.pie(
-                risk_data_ar["risk_distribution"],
-                names="Risk",
-                values="Count",
-                title="Receivables Delay Risk Distribution",
-            )
-            st.plotly_chart(fig_1, use_container_width=True, key="ar_risk_distribution")
-
-            st.warning(
-                f"High risk of Account Receivable payment delays detected in {risk_data_ar['high_risk_count']} invoices totalling {risk_data_ar['high_risk_total']:.2f} AED"
-            )
-
-            if st.button("View Risk AR Invoices"):
-                st.dataframe(view_risk_invoices(risk_data_ar["high_risk_invoices"]))
-
-        with col2:
             st.subheader("AP Payment Delay Risk Score")
             risk_data_ap = get_AP_risk_data(ap_df)
 
-            fig_2 = px.pie(
+            fig_1 = px.pie(
                 risk_data_ap["risk_distribution"],
                 names="Risk",
                 values="Count",
                 title="Payables Delay Risk Distribution",
             )
-            st.plotly_chart(fig_2, use_container_width=True, key="ap_risk_distribution")
+            st.plotly_chart(fig_1, use_container_width=True, key="ap_risk_distribution")
 
             st.warning(
                 f"High risk of Account Payable payment delays detected in {risk_data_ap['high_risk_count']} invoices totalling {risk_data_ap['high_risk_total']:.2f} AED"
@@ -84,6 +65,25 @@ def render():
 
             if st.button("View Risk AP Invoices"):
                 st.dataframe(view_risk_invoices(risk_data_ap["high_risk_invoices"]))
+
+        with col2:
+            st.subheader("AR Payment Delay Risk Score")
+            risk_data_ar = get_AR_risk_data(ar_df)
+
+            fig_2 = px.pie(
+                risk_data_ar["risk_distribution"],
+                names="Risk",
+                values="Count",
+                title="Receivables Delay Risk Distribution",
+            )
+            st.plotly_chart(fig_2, use_container_width=True, key="ar_risk_distribution")
+
+            st.warning(
+                f"High risk of Account Receivable payment delays detected in {risk_data_ar['high_risk_count']} invoices totalling {risk_data_ar['high_risk_total']:.2f} AED"
+            )
+
+            if st.button("View Risk AR Invoices"):
+                st.dataframe(view_risk_invoices(risk_data_ar["high_risk_invoices"]))
 
     except Exception as e:
         st.error(f"An error occurred while generating AP/AR tables: {e}")
