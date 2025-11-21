@@ -26,6 +26,7 @@ def suggest_questions():
         "What are the upcoming invoices?",
         "What are the overdue invoices",
         "What are the retail system services and Card schemes regulations",
+        "What are the important conditions mentioned in Purchase order?",
     ]
 
 
@@ -50,6 +51,8 @@ def is_rag_question(question):
         "warning",
         "opportunity",
         "account receivable",
+        "ap",
+        "ar",
         "account payable",
         "receivables",
         "payables",
@@ -60,8 +63,11 @@ def is_rag_question(question):
         "discount",
         "penalty",
         "late fee",
+        "retail payment system",
         "retail payment",
+        "retail payemnt system service"
         "card scheme",
+        "card scheme regulation",
         "compliance",
         "due date",
         "settlement",
