@@ -60,6 +60,28 @@ def update_invoice_status_and_save(file_path: str):
             return f"future ({delta} days remaining)"
 
     df["Status"] = df.apply(get_status, axis=1)
+
+    def create_summary(row):
+        name_field = "Supplier Name" if "Supplier Name" in row.index and pd.notna(row["Supplier Name"]) else "Customer Name"
+        name = row.get(name_field, '')
+        
+        summary = (
+            f"Invoice record: Invoice No. {row.get('Invoice No.', '')}, issued on {row.get('Invoice Date', '')}, "
+            f"from {name} for {row.get('Service Description', '')}. "
+            f"The original amount is {row.get('Amount (AED)', '')} AED. "
+            f"Final amount with penalty is {row.get('Final Amount with Penalty', '')} AED, "
+            f"and final amount with discount is {row.get('Final Amount with Discount', '')} AED. "
+            f"The VAT TRN is {row.get('VAT TRN', '')} with a VAT rate of {row.get('VAT %', '')}%. "
+            f"The payment status is '{row.get('Payment Status', '')}', with a due date of {row.get('Due Date', '')} "
+            f"and paid date recorded as {row.get('Paid Date', '')}. "
+            f"Status: {row.get('Status', '')}. "
+            f"Discount applied: {row.get('Discount', '')} (Note: {row.get('Discount Note', '')}). "
+            f"Penalty applied: {row.get('Penalty', '')} (Note: {row.get('Penalty Note', '')})."
+        )
+        return summary
+        
+    df["summary"] = df.apply(create_summary, axis=1)
+    
     df.to_csv(file_path, index=False)
     print(f"✅ Updated invoice statuses for {os.path.basename(file_path)}")
 

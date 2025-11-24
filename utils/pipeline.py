@@ -7,6 +7,7 @@ import re
 import pandas as pd
 from prompts.rag_chatbot import RAG_CHATBOT_PROMPT, DOC_CHATBOT_PROMPT
 
+from services.due_tables import financial_summary
 from utils.embedding import embed_texts
 from utils.llm_client import call_vllm
 from utils.config import (
@@ -102,7 +103,7 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
 
     strict_keywords = {'ar', 'ap'}
     loose_keywords = {'invoice', 'customer', 'supplier','payable','receivable', 'vendor', 'due', 'overdue','upcoming','unpaid', 'paid', 'accounts payable', 'accounts receivable', "payment status", 'discount', 'penalty', 'rebate'}
-    rebate_summary_keywords = ['rebate summary', 'rebate rule summary','rebate rules summary', 'rebate details', 'rebate information', "rebate condition for", "all reabte policy", "all rebate policies"] # Moved this definition up
+    rebate_summary_keywords = ['rebate summary', 'rebate rule summary','rebate rules summary', 'rebate details', 'rebate information', "rebate condition for", "all rebate policy", "all rebate policies"] # Moved this definition up
     
     q_lower = query.lower()
 
@@ -198,12 +199,27 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     # ---------------------------
     # Step 7 (UNIFIED) — Routing + Chained Filtering Pipeline (Option B)
     # ---------------------------
+    status_keywords = {
+        "upcoming": "upcoming",
+        "overdue": "overdue",
+        "future": "future"
+    }
+
+    strong_status_query = None
+    for key, status_word in status_keywords.items():
+        if key in q_lower:
+            strong_status_query = status_word
+            break
+            
+    strict_mode = bool(strong_status_query)
 
     # Helper: safe apply a boolean mask; if filtered empty, return original (to avoid discarding earlier results)
-    def safe_filter_df(original_df, filtered_df):
+    def safe_filter_df(original_df, filtered_df, strict_mode=False):
         """Return filtered_df if it has rows, otherwise return original_df."""
         if filtered_df is None:
             return original_df
+        if strict_mode:
+            return filtered_df
         return filtered_df if not filtered_df.empty else original_df
 
     # Make working copies
@@ -219,10 +235,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     if any(k in q_lower for k in ["both payable and receivable", "customer and supplier", "all invoices", "all payments", "all receivables", "all payables", "both ar and ap", "both accounts receivable and accounts payable"]):
         print("Routing: both AR and AP (explicit 'both' detected).")
         # keep both
-    elif any(k in q_lower for k in ["accounts payable", "accounts_payable", " ap ", "supplier", "vendor", "payable", "payables"]):
+    elif re.search(r'\baccounts payable\b', q_lower) or re.search(r'\bap\b', q_lower) or re.search(r'\bsupplier\b', q_lower) or re.search(r'\bvendor\b', q_lower) or re.search(r'\bpayable\b', q_lower):
         print("Routing: restrict to AP only (supplier/vendor detected).")
         working_ar = pd.DataFrame(columns=working_ar.columns)  # empty AR
-    elif any(k in q_lower for k in ["accounts receivable", "accounts_receivable", " ar ", "customer", "receivable", "receivables"]):
+    elif re.search(r'\baccounts receivable\b', q_lower) or re.search(r'\bar\b', q_lower) or re.search(r'\bcustomer\b', q_lower) or re.search(r'\breceivable\b', q_lower):
         print("Routing: restrict to AR only (customer/receivable detected).")
         working_ap = pd.DataFrame(columns=working_ap.columns)  # empty AP
     else:
@@ -237,10 +253,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         try:
             if "Payment Status" in working_ar.columns:
                 filtered = working_ar[working_ar["Payment Status"] == "not paid"]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Payment Status" in working_ap.columns:
                 filtered = working_ap[working_ap["Payment Status"] == "not paid"]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
             print("Applied filter: unpaid / not paid")
         except Exception as e:
             print(f"⚠️ Skipped unpaid filter due to: {e}")
@@ -250,10 +266,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         try:
             if "Status" in working_ar.columns:
                 filtered = working_ar[working_ar["Status"].str.contains("paid", case=False, na=False)]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Status" in working_ap.columns:
                 filtered = working_ap[working_ap["Status"].str.contains("paid", case=False, na=False)]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
             print("Applied filter: paid")
         except Exception as e:
             print(f"⚠️ Skipped paid filter due to: {e}")
@@ -267,10 +283,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         try:
             if "Status" in working_ar.columns:
                 filtered = working_ar[working_ar["Status"].str.contains("overdue", case=False, na=False)]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Status" in working_ap.columns:
                 filtered = working_ap[working_ap["Status"].str.contains("overdue", case=False, na=False)]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
                 status_ap_cols_override = AP_OVERDUE_COLS
             print("Applied filter: overdue")
         except Exception as e:
@@ -281,10 +297,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         try:
             if "Status" in working_ar.columns:
                 filtered = working_ar[working_ar["Status"].str.contains("upcoming", case=False, na=False)]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Status" in working_ap.columns:
                 filtered = working_ap[working_ap["Status"].str.contains("upcoming", case=False, na=False)]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
                 status_ap_cols_override = AP_UPCOMING_COLS
             print("Applied filter: upcoming")
         except Exception as e:
@@ -295,10 +311,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         try:
             if "Status" in working_ar.columns:
                 filtered = working_ar[working_ar["Status"].str.contains("future", case=False, na=False)]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Status" in working_ap.columns:
                 filtered = working_ap[working_ap["Status"].str.contains("future", case=False, na=False)]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
                 status_ap_cols_override = AP_UPCOMING_COLS
             print("Applied filter: future")
         except Exception as e:
@@ -322,16 +338,12 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         if "Supplier Name" in working_ap.columns and not working_ap.empty:
             candidate_suppliers = [str(x).strip().lower() for x in working_ap["Supplier Name"].dropna().unique()]
 
-        # Find company names by checking if any meaningful words from the query appear in the candidate names
-        stop_words = {'a', 'an', 'the', 'is', 'in', 'it', 'of', 'for', 'on', 'with', 'at', 'by', 'to', 'from', 'up', 'out', 'and', 'or', 'but', 'what', 'who', 'when', 'where', 'why', 'how', 'show', 'me', 'list', 'all', 'give', 'tell'}
-        query_tokens = {word.strip(".,?!") for word in q_lower.split()}
-        meaningful_query_words = {word for word in query_tokens if word not in stop_words and len(word) > 2}
-
+        # Simplified name matching
         matched_customer_names = [
-            name for name in candidate_customers if name and any(word in name for word in meaningful_query_words)
+            name for name in candidate_customers if re.search(r'\b' + re.escape(name) + r'\b', q_lower)
         ]
         matched_supplier_names = [
-            name for name in candidate_suppliers if name and any(word in name for word in meaningful_query_words)
+            name for name in candidate_suppliers if re.search(r'\b' + re.escape(name) + r'\b', q_lower)
         ]
 
         # If user explicitly mentions a name which matches candidate list, apply the filter
@@ -340,7 +352,7 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
             try:
                 mask = working_ar["Customer Name"].astype(str).str.lower().isin(matched_customer_names)
                 filtered = working_ar[mask]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
                 print(f"Applied filter: Customer Name match — {matched_customer_names}")
             except Exception as e:
                 print(f"⚠️ Skipped Customer Name filter due to: {e}")
@@ -350,7 +362,7 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
             try:
                 mask = working_ap["Supplier Name"].astype(str).str.lower().isin(matched_supplier_names)
                 filtered = working_ap[mask]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
                 print(f"Applied filter: Supplier Name match — {matched_supplier_names}")
             except Exception as e:
                 print(f"⚠️ Skipped Supplier Name filter due to: {e}")
@@ -411,14 +423,46 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
             end_date = next_week
             if "Due Date" in working_ar.columns and not working_ar.empty:
                 filtered = working_ar[(working_ar["Due Date"].dt.date >= start_date) & (working_ar["Due Date"].dt.date <= end_date)]
-                working_ar = safe_filter_df(working_ar, filtered)
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
             if "Due Date" in working_ap.columns and not working_ap.empty:
                 filtered = working_ap[(working_ap["Due Date"].dt.date >= start_date) & (working_ap["Due Date"].dt.date <= end_date)]
-                working_ap = safe_filter_df(working_ap, filtered)
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
             print("Applied filter: due within next 7 days (date-based)")
     except Exception as e:
         print(f"⚠️ Skipped date-based filter due to: {e}")
 
+    # -----------------------------
+    # STRICT STATUS FILTER ENFORCEMENT
+    # (For upcoming / overdue / future queries return ZERO rows if none found)
+    # -----------------------------
+    if strong_status_query:
+        print(f"🔒 Strict status mode enabled for: {strong_status_query}")
+
+        # Hard-filter strictly — do not fallback
+        if strong_status_query == "upcoming":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("upcoming", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("upcoming", case=False, na=False)]
+            ap_cols_to_use = AP_UPCOMING_COLS
+        elif strong_status_query == "overdue":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("overdue", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("overdue", case=False, na=False)]
+            ap_cols_to_use = AP_OVERDUE_COLS
+        elif strong_status_query == "future":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("future", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("future", case=False, na=False)]
+            ap_cols_to_use = AP_UPCOMING_COLS
+
+        # If no matches at all → return empty
+        if working_ar.empty and working_ap.empty:
+            print("🔍 No invoices match the requested status — returning zero rows.")
+            return "No invoices match the requested status."
+            
     # DONE: unified filter chain applied. Log summary
     print(f"Filters applied in order: {applied_filters}")
     print(f"Post-filter AR rows: {len(working_ar)}, Post-filter AP rows: {len(working_ap)}")

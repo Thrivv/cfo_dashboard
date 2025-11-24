@@ -9,6 +9,8 @@ import pandas as pd
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
 
+from utils.redis_client import store_metadata
+
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -83,10 +85,17 @@ def ingest_csv_row_as_point(row, file_path, embedding_model):
     # Build semantic text chunk
     text_chunk = (
         f"Invoice record: Invoice No. {row.get('Invoice No.', '')}, issued on {row.get('Invoice Date', '')}, "
-        f"from {name} for {row.get('Service Description', '')}. "
-        f"The amount is {row.get('Amount (AED)', '')} AED. "
-        f"The payment status is '{row.get('Payment Status', '')}' and the due date was '{row.get('Due Date', '')}'."
-    )
+        f"from {row.get('Supplier Name', '')} for {row.get('Service Description', '')}. "
+        f"The original amount is {row.get('Amount (AED)', '')} AED. "
+        f"Final amount with penalty is {row.get('Final Amount with Penalty', '')} AED, "
+        f"and final amount with discount is {row.get('Final Amount with Discount', '')} AED. "
+        f"The VAT TRN is {row.get('VAT TRN', '')} with a VAT rate of {row.get('VAT %', '')}%. "
+        f"The payment status is '{row.get('Payment Status', '')}', with a due date of {row.get('Due Date', '')} "
+        f"and paid date recorded as {row.get('Paid Date', '')}. "
+        f"Status: {row.get('Status', '')}. "
+        f"Discount applied: {row.get('Discount', '')} (Note: {row.get('Discount Note', '')}). "
+        f"Penalty applied: {row.get('Penalty', '')} (Note: {row.get('Penalty Note', '')})."
+   )
 
     embedding = embedding_model.encode(text_chunk).tolist()
     point_id = str(uuid.uuid4())
@@ -97,6 +106,7 @@ def ingest_csv_row_as_point(row, file_path, embedding_model):
     payload["content"] = text_chunk
     payload["doc_name"] = os.path.basename(file_path)
     payload["invoice_no"] = str(row.get("Invoice No.", "")).strip()
+    payload["chunk_id"] = point_id
 
     # Normalize amount
     try:
@@ -110,6 +120,8 @@ def ingest_csv_row_as_point(row, file_path, embedding_model):
     # Add epoch date fields
     payload["due_date_epoch"] = epoch_from_date_str(row.get("Due Date", ""))
     payload["paid_date_epoch"] = epoch_from_date_str(row.get("Paid Date", ""))
+    
+    store_metadata(point_id, payload)
 
     return models.PointStruct(id=point_id, vector=embedding, payload=payload)
 

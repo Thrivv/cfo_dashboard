@@ -392,7 +392,7 @@ def view_risk_invoices(high_risk_invoices):
     return df[display_columns].reset_index(drop=True)
 
 
-
+'''
 if __name__ == "__main__":
     result = generate_due_tables()
     print("### Accounts Receivable Upcoming Due ###")
@@ -402,3 +402,189 @@ if __name__ == "__main__":
     top_payers = get_correct_time_payers(result["AR_df"])
     print("\n--- Top Correct-Time Payers (Opportunities) ---")
     print(top_payers)
+'''
+
+# ==============================================================
+#                  FINANCIAL SUMMARY
+# ==============================================================
+import pandas as pd
+import numpy as np
+from typing import Dict, Any
+
+def financial_summary() -> Dict[str, Any]:
+    """Generates full financial summary for AP & AR. Hardened against missing columns/NaNs."""
+
+    due_data = generate_due_tables()
+    ar_df = due_data.get("AR_df", pd.DataFrame()).copy()
+    ap_df = due_data.get("AP_df", pd.DataFrame()).copy()
+
+    # Safety: ensure expected numeric columns exist
+    for df in (ar_df, ap_df):
+        if "Amount (AED)" not in df.columns:
+            df["Amount (AED)"] = 0.0
+        # normalize date column type if exists
+        if "Due Date" in df.columns:
+            df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
+
+    # Risk extraction (expects these functions to exist and handle empty dfs)
+    ar_risk = get_AR_risk_data(ar_df)
+    ap_risk = get_AP_risk_data(ap_df)
+
+    # -------------------------------------------------------
+    # TOTAL AP + AR
+    # -------------------------------------------------------
+    total_ap = float(ap_df["Amount (AED)"].sum())
+    total_ar = float(ar_df["Amount (AED)"].sum())
+    total_all = float(total_ap + total_ar)
+
+    # -------------------------------------------------------
+    # GROUP BY SUPPLIER / CUSTOMER
+    # -------------------------------------------------------
+    ap_by_supplier = (
+        ap_df.groupby("Supplier Name")["Amount (AED)"].sum().reset_index()
+        if "Supplier Name" in ap_df.columns else pd.DataFrame(columns=["Supplier Name", "Amount (AED)"])
+    )
+    ar_by_customer = (
+        ar_df.groupby("Customer Name")["Amount (AED)"].sum().reset_index()
+        if "Customer Name" in ar_df.columns else pd.DataFrame(columns=["Customer Name", "Amount (AED)"])
+    )
+
+    # -------------------------------------------------------
+    # UPCOMING NEXT 7 DAYS
+    # -------------------------------------------------------
+    today = pd.Timestamp.today().normalize()
+    next_7 = today + pd.Timedelta(days=7)
+
+    # Normalize payment status columns to string safely
+    ap_df["Payment Status"] = ap_df.get("Payment Status", "").astype(str)
+    ar_df["Payment Status"] = ar_df.get("Payment Status", "").astype(str)
+
+    # safe lowercase column for filtering
+    ap_payment_lower = ap_df["Payment Status"].astype(str).str.lower()
+    ar_payment_lower = ar_df["Payment Status"].astype(str).str.lower()
+
+    # remove rows with invalid due date for upcoming filters
+    upcoming_ap = ap_df[
+        (ap_payment_lower == "not paid")
+        & (ap_df.get("Due Date") >= today)
+        & (ap_df.get("Due Date") <= next_7)
+    ] if "Due Date" in ap_df.columns else ap_df.iloc[0:0]
+
+    upcoming_ar = ar_df[
+        (ar_payment_lower == "not paid")
+        & (ar_df.get("Due Date") >= today)
+        & (ar_df.get("Due Date") <= next_7)
+    ] if "Due Date" in ar_df.columns else ar_df.iloc[0:0]
+
+    # AP totals: handle optional 'Final Amount with Discount'
+    ap_with_disc_total = float(
+        upcoming_ap.get("Final Amount with Discount", upcoming_ap.get("Amount (AED)", pd.Series(0))).fillna(0).sum()
+    )
+    ap_without_disc_total = float(upcoming_ap.get("Amount (AED)", pd.Series(0)).fillna(0).sum())
+
+    ap_by_supplier_next_7 = (
+        upcoming_ap.groupby("Supplier Name").agg(
+            with_discount=("Final Amount with Discount", lambda s: s.fillna(0).sum()),
+            without_discount=("Amount (AED)", lambda s: s.fillna(0).sum())
+        ).reset_index()
+        if not upcoming_ap.empty and "Supplier Name" in upcoming_ap.columns else pd.DataFrame(columns=["Supplier Name","with_discount","without_discount"])
+    )
+
+    # AR totals: check if AR has a 'Final Amount with Discount' (if not, use Amount)
+    ar_with_col = "Final Amount with Discount" if "Final Amount with Discount" in upcoming_ar.columns else "Amount (AED)"
+    ar_with_disc_total = float(upcoming_ar.get(ar_with_col, pd.Series(0)).fillna(0).sum())
+    ar_without_disc_total = float(upcoming_ar.get("Amount (AED)", pd.Series(0)).fillna(0).sum())
+
+    ar_by_customer_next_7 = (
+        upcoming_ar.groupby("Customer Name").agg(
+            with_discount=(ar_with_col, lambda s: s.fillna(0).sum()),
+            without_discount=("Amount (AED)", lambda s: s.fillna(0).sum())
+        ).reset_index()
+        if not upcoming_ar.empty and "Customer Name" in upcoming_ar.columns else pd.DataFrame(columns=["Customer Name","with_discount","without_discount"])
+    )
+
+    # -------------------------------------------------------
+    # OVERDUE TOTALS
+    # -------------------------------------------------------
+    overdue_ap = ap_risk.get("high_risk_invoices", pd.DataFrame())
+    overdue_ar = ar_risk.get("high_risk_invoices", pd.DataFrame())
+
+    overdue_without_penalty = float(
+        overdue_ap.get("Amount (AED)", pd.Series(0)).fillna(0).sum()
+        + overdue_ar.get("Amount (AED)", pd.Series(0)).fillna(0).sum()
+    )
+
+    # Use Final Amount with Penalty for both AP and AR if present; fall back to Amount (AED)
+    def sum_with_penalty(df):
+        if df is None or df.empty:
+            return 0.0
+        if "Final Amount with Penalty" in df.columns:
+            return float(df["Final Amount with Penalty"].fillna(df.get("Amount (AED)", 0)).sum())
+        return float(df.get("Amount (AED)", pd.Series(0)).fillna(0).sum())
+
+    overdue_with_penalty = float(sum_with_penalty(overdue_ap) + sum_with_penalty(overdue_ar))
+
+    # -------------------------------------------------------
+    # REBATE (DISCOUNT EARNED)
+    # -------------------------------------------------------
+    paid_ap = ap_df[ap_df.get("Status", "").astype(str).str.lower() == "paid"].copy()
+    if "Final Amount with Discount" in paid_ap.columns:
+        paid_ap["discount_earned"] = (paid_ap.get("Amount (AED)", 0) - paid_ap["Final Amount with Discount"]).fillna(0)
+    else:
+        # if no final amount field, assume 0 discount earned
+        paid_ap["discount_earned"] = 0.0
+
+    total_rebate = float(paid_ap["discount_earned"].sum())
+
+    rebate_by_supplier = (
+        paid_ap.groupby("Supplier Name")["discount_earned"].sum().reset_index()
+        if "Supplier Name" in paid_ap.columns else pd.DataFrame(columns=["Supplier Name", "discount_earned"])
+    )
+
+    # -------------------------------------------------------
+    # OUTPUT (ensure python-native types where possible)
+    # -------------------------------------------------------
+    return {
+        "total_amount_all": total_all,
+
+        "total_account_payable": total_ap,
+        "ap_by_supplier": ap_by_supplier,
+
+        "total_account_receivable": total_ar,
+        "ar_by_customer": ar_by_customer,
+
+        "upcoming_ap": {
+            "total_with_discount": ap_with_disc_total,
+            "total_without_discount": ap_without_disc_total,
+            "by_supplier": ap_by_supplier_next_7
+        },
+
+        "upcoming_ar": {
+            "total_with_discount": ar_with_disc_total,
+            "total_without_discount": ar_without_disc_total,
+            "by_customer": ar_by_customer_next_7
+        },
+
+        "overdue": {
+            "total_without_penalty": overdue_without_penalty,
+            "total_with_penalty": overdue_with_penalty,
+            "overdue_ap_rows": overdue_ap,   # include DataFrames if downstream wants them
+            "overdue_ar_rows": overdue_ar
+        },
+
+        "rebates": {
+            "total_rebate_earned": total_rebate,
+            "rebate_by_supplier": rebate_by_supplier
+        }
+    }
+
+# ==============================================================
+#                      MANUAL TEST
+# ==============================================================
+
+if __name__ == "__main__":
+    summary = financial_summary()
+    print("=== Financial Summary ===")
+    for key, value in summary.items():
+        print(f"\n--- {key} ---")
+        print(value)
