@@ -101,9 +101,9 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     reranked_docs = rerank(query, all_docs)
     top_matches = "\n\n".join(reranked_docs[:2])
 
-    strict_keywords = {'ar', 'ap'}
+    strict_keywords = {' ar ', ' ap '}
     loose_keywords = {'invoice', 'customer', 'supplier','payable','receivable', 'vendor', 'due', 'overdue','upcoming','unpaid', 'paid', 'accounts payable', 'accounts receivable', "payment status", 'discount', 'penalty', 'rebate'}
-    rebate_summary_keywords = ['rebate summary', 'rebate rule summary','rebate rules summary', 'rebate details', 'rebate information', "rebate condition for", "all rebate policy", "all rebate policies"] # Moved this definition up
+    rebate_summary_keywords = ['rebate summary', 'rebate rule summary','rebate rules summary', 'rebate details', 'rebate information', "rebate condition for", "all rebate policy", "all rebate policies", "rebate policy", "penalty and rebate", "rebate and penalty", "penalty summary", "penalty policy", "penalty policies"] 
     
     q_lower = query.lower()
 
@@ -114,7 +114,7 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
                 rebate_data = json.load(f)
             rebate_context = json.dumps(rebate_data, indent=2)
             
-            prompt = f"""You are a financial assistant. Answer the following user query based *only* on the provided JSON data.
+            prompt = f"""You are a financial assistant. Answer the following user query based *only* on the provided Rebate and penalty data.
 
 **JSON Data:**
 ```json
@@ -235,10 +235,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     if any(k in q_lower for k in ["both payable and receivable", "customer and supplier", "all invoices", "all payments", "all receivables", "all payables", "both ar and ap", "both accounts receivable and accounts payable"]):
         print("Routing: both AR and AP (explicit 'both' detected).")
         # keep both
-    elif re.search(r'\baccounts payable\b', q_lower) or re.search(r'\bap\b', q_lower) or re.search(r'\bsupplier\b', q_lower) or re.search(r'\bvendor\b', q_lower) or re.search(r'\bpayable\b', q_lower):
+    elif re.search(r'\baccounts payable\b', q_lower) or re.search(r'\bpayables\b', q_lower) or re.search(r'\bsupplier\b', q_lower) or re.search(r'\bvendor\b', q_lower) or re.search(r'\bpayable\b', q_lower) or re.search(r'\b ap \b', q_lower):
         print("Routing: restrict to AP only (supplier/vendor detected).")
         working_ar = pd.DataFrame(columns=working_ar.columns)  # empty AR
-    elif re.search(r'\baccounts receivable\b', q_lower) or re.search(r'\bar\b', q_lower) or re.search(r'\bcustomer\b', q_lower) or re.search(r'\breceivable\b', q_lower):
+    elif re.search(r'\baccounts receivable\b', q_lower) or re.search(r'\breceivables\b', q_lower) or re.search(r'\bcustomer\b', q_lower) or re.search(r'\breceivable\b', q_lower) or re.search(r'\b ar \b', q_lower):
         print("Routing: restrict to AR only (customer/receivable detected).")
         working_ap = pd.DataFrame(columns=working_ap.columns)  # empty AP
     else:

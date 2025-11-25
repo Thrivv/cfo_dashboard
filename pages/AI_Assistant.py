@@ -44,6 +44,10 @@ def is_rag_question(question):
     """Check if the question is asking for document/invoice/regulation analysis."""
     rag_keywords = [
         "invoice",
+        "invoices",
+        "rebate summary",
+        "rebate rule summary",
+        "rebate",
         "payment",
         "overdue",
         "regulation",
@@ -57,6 +61,7 @@ def is_rag_question(question):
         "receivables",
         "payables",
         "purchase orders",
+        "purchase order",
         " po ",
         "terms and conditions",
         "t&c",
