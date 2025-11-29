@@ -80,6 +80,7 @@ def is_rag_question(question):
         "supplier",
         "vendor",
         "customer",
+        "customers",
         "payment schedule",
         "extended terms",
         "regulatory requirement",
