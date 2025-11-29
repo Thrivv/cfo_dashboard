@@ -8,7 +8,8 @@ plotly>=6.3.0
 
 # AI/ML Dependencies
 sentence-transformers>=5.1.0
-cohere>=5.18.0
+accelerate>=0.20.0
+
 
 # Vector Database & Search
 qdrant-client>=1.15.0

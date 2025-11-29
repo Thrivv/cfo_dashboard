@@ -1,0 +1,34 @@
+[
+  {
+    "supplier_name": "Gulf Tech Solutions LLC",
+    "discount_clause": "7% discount if paid before Due date",
+    "discount": "7%",
+    "penalty_clause": null,
+    "penalty": null,
+    "document_name": "Gulftech_PO.pdf"
+  },
+  {
+    "supplier_name": "Arabian Construction Co",
+    "discount_clause": "2% discount if paid before Due date",
+    "discount": "2%",
+    "penalty_clause": "A penalty of 1.5% charged per month for late payment",
+    "penalty": "1.5%",
+    "document_name": "Arabian_PO.pdf"
+  },
+  {
+    "supplier_name": "Desert Catering Services",
+    "discount_clause": "4% discount if paid before due date",
+    "discount": "4%",
+    "penalty_clause": null,
+    "penalty": null,
+    "document_name": "DesertCater_PO.pdf"
+  },
+  {
+    "supplier_name": "Emirates Logistics FZC",
+    "discount_clause": "4% discount if paid before due date",
+    "discount": "4%",
+    "penalty_clause": "0.5% penalty per full week or partial week of delay for late delivery",
+    "penalty": "0.5%",
+    "document_name": "Emirates_PO.pdf"
+  }
+]

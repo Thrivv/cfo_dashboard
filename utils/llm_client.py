@@ -60,7 +60,7 @@ def clean_output(text: str) -> str:
     return cleaned if cleaned else "No valid response received from LLM."
 
 
-def call_vllm(prompt: str, max_tokens: int = 512) -> str:
+def call_vllm(prompt: str, max_tokens: int = 2000) -> str:
     """Calls the vLLM endpoint on Runpod, polls for completion, and returns a cleaned output."""
     try:
         run_request = endpoint.run_sync(

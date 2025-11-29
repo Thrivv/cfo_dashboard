@@ -1,152 +1,183 @@
-"""RAG pipeline utilities for document processing."""
+"""RAG pipeline utilities for document processing — Enhanced for CFO dashboard."""
 
 from datetime import datetime, timedelta
 import json
 import os
-import uuid
-
+import re
 import pandas as pd
-from qdrant_client.models import PointStruct
+from prompts.rag_chatbot import RAG_CHATBOT_PROMPT, DOC_CHATBOT_PROMPT
 
-from utils.chunker import chunk_text
-from utils.clear_data import clear_all_qdrant, clear_all_redis
+from services.due_tables import financial_summary
 from utils.embedding import embed_texts
 from utils.llm_client import call_vllm
+from utils.config import (
+    #AR_INVOICE_COLLECTION,
+    #AP_INVOICE_COLLECTION,
+    PO_TC_COLLECTION,
+    REGULATIONS_COLLECTION,
+    #REBATE_COLLECTION,
+)
 
 # Local utility imports
-from utils.parser import parse_csv, parse_pdf
-from utils.redis_client import get_metadata, store_metadata
+from utils.redis_client import get_metadata
 from utils.rerank import rerank
-from utils.vectorstore_qdrant import init_collection, search, upsert_embeddings
+from utils.vectorstore_qdrant import search
+from utils.data_refresh import check_and_update_data
+
+# Define column sets for dynamic table generation
+BASE_COLS = ['Invoice No.', 'Invoice Date', 'Due Date', 'Service Description', 'Amount (AED)', 'Payment Status', 'VAT TRN', 'VAT %', 'Paid Date', 'Status']
+AP_COLS_SUPPLIER = ['Supplier Name']
+AR_COLS_CUSTOMER = ['Customer Name']
+DISCOUNT_COLS = ['Discount', 'Discount Note', 'Final Amount with Discount']
+PENALTY_COLS = ['Penalty', 'Penalty Note', 'Final Amount with Penalty']
+
+# Upcoming: Base + Supplier + Discount
+AP_UPCOMING_COLS = BASE_COLS[:3] + AP_COLS_SUPPLIER + BASE_COLS[3:6] + DISCOUNT_COLS + PENALTY_COLS + BASE_COLS[6:]
+# Overdue: Base + Supplier + Penalty
+AP_OVERDUE_COLS = BASE_COLS[:3] + AP_COLS_SUPPLIER + BASE_COLS[3:6] + PENALTY_COLS + BASE_COLS[6:]
+# Default/Paid: All columns
+AP_DEFAULT_COLS = BASE_COLS[:3] + AP_COLS_SUPPLIER + BASE_COLS[3:6] + DISCOUNT_COLS + PENALTY_COLS + BASE_COLS[6:]
+
+# AR columns don't have discount/penalty, so they are simpler
+AR_COLS = BASE_COLS[:3] + AR_COLS_CUSTOMER + BASE_COLS[3:]
+
+# ---------------------------------------------------------------------------
+# Main Unified RAG Query Pipeline
+# ---------------------------------------------------------------------------
 
 
-def update_invoice_status_and_save(file_path: str):
-    """Reads a CSV file, adds/updates a 'Status' column, and saves it."""
-    df = pd.read_csv(file_path)
-    today = datetime.now().date()
-
-    def get_status(row):
-        due_date = pd.to_datetime(row["Due Date"]).date()
-        payment_status = str(row["Payment Status"]).lower().strip()
-
-        if payment_status == "paid":
-            return "paid"
-
-        delta = (due_date - today).days
-
-        if delta < 0:
-            return f"overdue ({abs(delta)} days ago)"
-        elif 0 <= delta <= 7:
-            return f"upcoming ({delta} days remaining)"
-        else:
-            return f"future ({delta} days remaining)"
-
-    df["Status"] = df.apply(get_status, axis=1)
-    df.to_csv(file_path, index=False)
-
-
-def check_and_update_data():
+def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     """
-    Checks the last update date and runs the clearing and ingestion scripts if a new day has started.
+    Unified RAG pipeline with invoice logic, semantic retrieval,
+    reranking, and regulatory/PO context composition.
+
+    This version uses a single unified routing + chained filtering pipeline
+    (routing by AR/AP/both, then sequential filters for paid/unpaid -> status ->
+    customer/supplier name -> discount/penalty), while preserving all original features.
     """
-    # Import here to avoid circular dependency
-    from utils.ingest import ingest_all_data
+    print(f"\n🔍 Running RAG Query: {query}\n")
 
-    date_cache_file = "data/last_update_date.txt"
-    today_str = datetime.now().strftime("%Y-%m-%d")
-
-    last_update_date = ""
-    if os.path.exists(date_cache_file):
-        with open(date_cache_file, "r") as f:
-            last_update_date = f.read().strip()
-
-    if last_update_date != today_str:
-        print("🚀 New day detected. Clearing old data and ingesting fresh data...")
-
-        # 1. Clear all existing data from Qdrant and Redis
-        print("🧹 Clearing Qdrant and Redis data...")
-        clear_all_qdrant()
-        clear_all_redis()
-        print("✅ Caches, vectors, and metadata wiped clean.")
-
-        # 2. Update invoice CSV files with the latest status
-        print("🔄 Updating invoice statuses...")
-        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AP_Invoice.csv")
-        update_invoice_status_and_save("/home/ubuntu/cfo_dashboard/data/AR_Invoice.csv")
-        print("✅ Invoice statuses updated.")
-
-        # 3. Ingest all data from scratch
-        print("🚚 Ingesting fresh data...")
-        ingest_all_data()
-
-        # 4. Update the date cache to prevent re-running today
-        with open(date_cache_file, "w") as f:
-            f.write(today_str)
-
-        print("✅ Data refresh complete for today.")
-    else:
-        print("ℹ️ Data is already up-to-date for today.")
-
-
-# -------- Template Loader --------
-def load_template(template_name: str) -> str:
-    """Load the selected template from insights.json."""
-    with open("prompts/insights.json", "r") as f:
-        templates = json.load(f)
-    return templates.get(template_name, templates["default"])
-
-
-# -------- Ingestion Pipeline --------
-def ingest_document(path: str, metadata: dict):
-    """Embed and index documents (PDF or CSV) into Qdrant."""
-    if path.endswith(".pdf"):
-        text = parse_pdf(path)
-        chunks = chunk_text(text)
-    elif path.endswith(".csv"):
-        chunks = parse_csv(path)
-    else:
-        raise ValueError("Unsupported file type")
-
-    vectors = embed_texts(chunks)
-    init_collection(len(vectors[0]))
-
-    points_to_upsert = []
-    for chunk, vector in zip(chunks, vectors):
-        chunk_id = str(uuid.uuid4())
-        full_metadata = {**metadata, "content": chunk, "chunk_id": chunk_id}
-        store_metadata(chunk_id, full_metadata)
-
-        points_to_upsert.append(
-            PointStruct(id=chunk_id, vector=vector, payload={"chunk_id": chunk_id})
-        )
-
-    upsert_embeddings(points_to_upsert)
-
-
-# -------- Query Pipeline (Unified RAG + Invoice Logic) --------
-def query_rag(query: str, template_name: str = "default", top_k: int = 20):
-    """Main RAG query pipeline with intelligent invoice filtering and context composition."""
-    # Check and update data at the beginning of the pipeline
+    # Step 1 — Ensure data freshness
     check_and_update_data()
 
-    # Step 1: Vector Search + Rerank
+    # Step 2 — Vector Search across all collections
     q_vec = embed_texts([query])[0]
-    results = search(q_vec, top_k=top_k)
-    docs = []
-    for r in results:
-        metadata = get_metadata(r.payload["chunk_id"])
-        if metadata and "content" in metadata:
-            docs.append(metadata["content"])
-    reranked = rerank(query, docs)
-    top_matches = "\n\n".join(reranked[:2])
+    collections_map = {
+        "po": PO_TC_COLLECTION,
+        "reg": REGULATIONS_COLLECTION,
+        #"ar": AR_INVOICE_COLLECTION,
+        #"ap": AP_INVOICE_COLLECTION,
+        #"rebate": REBATE_COLLECTION,
+    }
 
-    # Step 2: Load and preprocess data
+    docs_by_collection = {key: [] for key in collections_map}
+    all_docs = []
+
+    for name, coll in collections_map.items():
+        try:
+            results = search(coll, q_vec, top_k=top_k)
+            
+            # Retrieve content for each collection
+            coll_docs = []
+            for r in results:
+                content = None
+                if "chunk_id" in r.payload:
+                    meta = get_metadata(r.payload["chunk_id"])
+                    if meta and "content" in meta:
+                        content = meta["content"]
+                elif "content" in r.payload:  # Fallback
+                    content = r.payload["content"]
+                
+                if content:
+                    coll_docs.append(content)
+
+            docs_by_collection[name] = coll_docs
+            all_docs.extend(coll_docs)
+
+        except Exception as e:
+            print(f"⚠️ Skipped search for {coll}: {e}")
+
+    # Step 3 & 4 — Rerank all retrieved documents
+    reranked_docs = rerank(query, all_docs)
+    top_matches = "\n\n".join(reranked_docs[:2])
+
+    strict_keywords = {' ar ', ' ap '}
+    loose_keywords = {'invoice', 'customer', 'supplier','payable','receivable', 'vendor', 'due', 'overdue','upcoming','unpaid', 'paid', 'accounts payable', 'accounts receivable', "payment status", 'discount', 'penalty', 'rebate'}
+    rebate_summary_keywords = ['rebate summary', 'rebate rule summary','rebate rules summary', 'rebate details', 'rebate information', "rebate condition for", "all rebate policy", "all rebate policies", "rebate policy", "penalty and rebate", "rebate and penalty", "penalty summary", "penalty policy", "penalty policies"] 
+    
+    q_lower = query.lower()
+
+    if any(k in q_lower for k in rebate_summary_keywords):
+        print("🎯 Detected Rebate Summary Query. Routing to JSON file.")
+        try:
+            with open("data/rebate_output.json", "r") as f:
+                rebate_data = json.load(f)
+            rebate_context = json.dumps(rebate_data, indent=2)
+            
+            prompt = f"""You are a financial assistant. Answer the following user query based *only* on the provided Rebate and penalty data.
+
+**JSON Data:**
+```json
+{rebate_context}
+```
+
+**User Query:**
+{query}
+
+**Answer:**
+"""
+            print("🧠 Sending rebate summary query to LLM...")
+            response = call_vllm(prompt, max_tokens=1024)
+            print("✅ Response received.\n")
+            return response
+            
+        except Exception as e:
+            print(f"⚠️ Error loading rebate_output.json: {e}")
+            return "I am sorry, but I encountered an error trying to access the rebate summary data."
+        
+
+    is_invoice_query = any(re.search(r'\b' + re.escape(k.strip()) + r'\b', q_lower) for k in strict_keywords) or \
+                       any(k.strip() in q_lower for k in loose_keywords)
+    
+    is_document_only_query = any(k in q_lower for k in ['regulation', 'regulations', 'purchase order', 'purchase orders', 'po terms', 'po term', "card scheme", "retail payment", "card scheme regulation", "retail payment system", 'terms of purchase order', 'terms of purchase orders', "company policy", "compliance", "regulatory", "regulator"])
+
+    if is_document_only_query and not is_invoice_query:
+        # ROUTE 1: Document-only query for regulations, POs, etc.
+        print("🎯 Detected Document-Only Query. Routing to document context.")
+        
+        doc_context_texts = docs_by_collection.get("reg", []) + docs_by_collection.get("po", [])
+        
+        if not doc_context_texts:
+            print("⚠️ No document context found for this query.")
+            return "I couldn't find any relevant documents to answer your question. Please try a different query."
+
+        reranked_doc_context = rerank(query, doc_context_texts)
+        final_context = "\n\n".join(reranked_doc_context[:2])
+
+        template = DOC_CHATBOT_PROMPT
+        
+        prompt = template.format(
+            context=final_context,
+            query=query
+        )
+        
+        print("🧠 Sending document-focused query to LLM...")
+        response = call_vllm(prompt, max_tokens=1024)
+        print("✅ Response received.\n")
+        return response
+
+    # ROUTE 2: General query involving invoices.
+    print("🎯 Detected General/Invoice Query. Routing to full context.")
+
+    # Step 5 — Load invoice data and construct document contexts from search
     ar_df = pd.read_csv("data/AR_Invoice.csv")
     ap_df = pd.read_csv("data/AP_Invoice.csv")
-    po_text = parse_pdf("data/PO_T&C.pdf")
-    reg_text = parse_pdf("data/RPSR_RPSCSR_UAE.pdf")
+    
+    # Use retrieved chunks instead of parsing full PDFs
+    po_text = "\n\n".join(docs_by_collection["po"])
+    reg_text = "\n\n".join(docs_by_collection["reg"])
 
-    # Normalize dates
+    # Step 6 — Normalize Due Dates and Status
     for df in [ar_df, ap_df]:
         if "Due Date" in df.columns:
             df["Due Date"] = pd.to_datetime(df["Due Date"], errors="coerce")
@@ -154,60 +185,313 @@ def query_rag(query: str, template_name: str = "default", top_k: int = 20):
     today = datetime.now().date()
     next_week = today + timedelta(days=7)
 
-    # Step 3: Label status based on payment & due date
-    def label_status(df):
-        def status_fn(row):
-            if pd.isna(row["Due Date"]):
-                return "Unknown"
-            elif str(row["Payment Status"]).lower() != "not paid":
-                return "Paid"
-            elif row["Due Date"].date() < today:
-                return "Overdue"
-            elif today <= row["Due Date"].date() <= next_week:
-                return "Upcoming"
-            else:
-                return "Future"
+    # Keep original column-selection defaults
+    ap_cols_to_use = AP_DEFAULT_COLS
+    ar_cols_to_use = AR_COLS
 
-        df["Status"] = df.apply(status_fn, axis=1)
-        return df
+    # Ensure 'Status' and 'Payment Status' columns exist and normalize text
+    for df in [ar_df, ap_df]:
+        if "Status" in df.columns:
+            df["Status"] = df["Status"].astype(str).str.strip().str.lower()
+        if "Payment Status" in df.columns:
+            df["Payment Status"] = df["Payment Status"].astype(str).str.strip().str.lower()
 
-    ar_df, ap_df = label_status(ar_df), label_status(ap_df)
+    # ---------------------------
+    # Step 7 (UNIFIED) — Routing + Chained Filtering Pipeline (Option B)
+    # ---------------------------
+    status_keywords = {
+        "upcoming": "upcoming",
+        "overdue": "overdue",
+        "future": "future"
+    }
 
-    # Step 4: Query intent filtering
-    q_lower = query.lower()
-    if any(k in q_lower for k in ["upcoming", "this week", "next week"]):
-        ar_filtered = ar_df[ar_df["Status"] == "Upcoming"]
-        ap_filtered = ap_df[ap_df["Status"] == "Upcoming"]
-    elif any(k in q_lower for k in ["overdue", "late", "crossed"]):
-        ar_filtered = ar_df[ar_df["Status"] == "Overdue"]
-        ap_filtered = ap_df[ap_df["Status"] == "Overdue"]
+    strong_status_query = None
+    for key, status_word in status_keywords.items():
+        if key in q_lower:
+            strong_status_query = status_word
+            break
+            
+    strict_mode = bool(strong_status_query)
+
+    # Helper: safe apply a boolean mask; if filtered empty, return original (to avoid discarding earlier results)
+    def safe_filter_df(original_df, filtered_df, strict_mode=False):
+        """Return filtered_df if it has rows, otherwise return original_df."""
+        if filtered_df is None:
+            return original_df
+        if strict_mode:
+            return filtered_df
+        return filtered_df if not filtered_df.empty else original_df
+
+    # Make working copies
+    source_ar_df = ar_df.copy()
+    source_ap_df = ap_df.copy()
+
+    # Start with both by default
+    working_ar = source_ar_df.copy()
+    working_ap = source_ap_df.copy()
+
+    # Determine initial routing based on explicit keywords (preserve original routing behavior)
+    # If user mentions phrases indicating "both", keep both; else restrict to AP or AR if mentioned.
+    if any(k in q_lower for k in ["both payable and receivable", "customer and supplier", "all invoices", "all payments", "all receivables", "all payables", "both ar and ap", "both accounts receivable and accounts payable"]):
+        print("Routing: both AR and AP (explicit 'both' detected).")
+        # keep both
+    elif re.search(r'\baccounts payable\b', q_lower) or re.search(r'\bpayables\b', q_lower) or re.search(r'\bsupplier\b', q_lower) or re.search(r'\bvendor\b', q_lower) or re.search(r'\bpayable\b', q_lower) or re.search(r'\b ap \b', q_lower):
+        print("Routing: restrict to AP only (supplier/vendor detected).")
+        working_ar = pd.DataFrame(columns=working_ar.columns)  # empty AR
+    elif re.search(r'\baccounts receivable\b', q_lower) or re.search(r'\breceivables\b', q_lower) or re.search(r'\bcustomer\b', q_lower) or re.search(r'\breceivable\b', q_lower) or re.search(r'\b ar \b', q_lower):
+        print("Routing: restrict to AR only (customer/receivable detected).")
+        working_ap = pd.DataFrame(columns=working_ap.columns)  # empty AP
     else:
-        ar_filtered, ap_filtered = ar_df, ap_df
+        print("Routing: default to both AR and AP.")
 
-    # Step 5: Prepare context strings
-    def truncate(txt, max_len=5000):
+    # We'll record which filters applied (for debugging/logging)
+    applied_filters = []
+
+    # ------- 1) Paid / Unpaid filter -------
+    if any(k in q_lower for k in ["unpaid", "not paid", "pending", " due ", "to be paid", "un-paid"]):
+        applied_filters.append("payment_status:not_paid")
+        try:
+            if "Payment Status" in working_ar.columns:
+                filtered = working_ar[working_ar["Payment Status"] == "not paid"]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Payment Status" in working_ap.columns:
+                filtered = working_ap[working_ap["Payment Status"] == "not paid"]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+            print("Applied filter: unpaid / not paid")
+        except Exception as e:
+            print(f"⚠️ Skipped unpaid filter due to: {e}")
+
+    elif "paid" in q_lower:
+        applied_filters.append("payment_status:paid")
+        try:
+            if "Status" in working_ar.columns:
+                filtered = working_ar[working_ar["Status"].str.contains("paid", case=False, na=False)]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Status" in working_ap.columns:
+                filtered = working_ap[working_ap["Status"].str.contains("paid", case=False, na=False)]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+            print("Applied filter: paid")
+        except Exception as e:
+            print(f"⚠️ Skipped paid filter due to: {e}")
+
+    # ------- 2) Status filter (overdue / upcoming / future) -------
+    # We'll set AP column selection if upcoming/overdue matched
+    status_ap_cols_override = None
+
+    if any(k in q_lower for k in ["overdue", "late", "crossed", "past due", "due date passed", "payments overdue", "invoices overdue"]):
+        applied_filters.append("status:overdue")
+        try:
+            if "Status" in working_ar.columns:
+                filtered = working_ar[working_ar["Status"].str.contains("overdue", case=False, na=False)]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Status" in working_ap.columns:
+                filtered = working_ap[working_ap["Status"].str.contains("overdue", case=False, na=False)]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+                status_ap_cols_override = AP_OVERDUE_COLS
+            print("Applied filter: overdue")
+        except Exception as e:
+            print(f"⚠️ Skipped overdue filter due to: {e}")
+
+    elif any(k in q_lower for k in ["upcoming", "this week", "next 7 days", "payments to make this week", "due this week", "due in the next 7 days", "due soon"]):
+        applied_filters.append("status:upcoming")
+        try:
+            if "Status" in working_ar.columns:
+                filtered = working_ar[working_ar["Status"].str.contains("upcoming", case=False, na=False)]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Status" in working_ap.columns:
+                filtered = working_ap[working_ap["Status"].str.contains("upcoming", case=False, na=False)]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+                status_ap_cols_override = AP_UPCOMING_COLS
+            print("Applied filter: upcoming")
+        except Exception as e:
+            print(f"⚠️ Skipped upcoming filter due to: {e}")
+
+    elif any(k in q_lower for k in ["future", "next week", "after this week", "payments to make next week", "due next week", "due after this week"]):
+        applied_filters.append("status:future")
+        try:
+            if "Status" in working_ar.columns:
+                filtered = working_ar[working_ar["Status"].str.contains("future", case=False, na=False)]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Status" in working_ap.columns:
+                filtered = working_ap[working_ap["Status"].str.contains("future", case=False, na=False)]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+                status_ap_cols_override = AP_UPCOMING_COLS
+            print("Applied filter: future")
+        except Exception as e:
+            print(f"⚠️ Skipped future filter due to: {e}")
+
+    
+    # if an AP column override was set, use it
+    if status_ap_cols_override:
+        ap_cols_to_use = status_ap_cols_override
+
+    # ------- 3) Customer / Supplier name filter -------
+    # We'll try to detect a name mentioned in the query by looking at unique names in the working dataframes
+    try:
+        # gather candidate names from the current working sets (lowercased)
+        candidate_customers = []
+        candidate_suppliers = []
+
+        if "Customer Name" in working_ar.columns and not working_ar.empty:
+            candidate_customers = [str(x).strip().lower() for x in working_ar["Customer Name"].dropna().unique()]
+
+        if "Supplier Name" in working_ap.columns and not working_ap.empty:
+            candidate_suppliers = [str(x).strip().lower() for x in working_ap["Supplier Name"].dropna().unique()]
+
+        # Simplified name matching
+        matched_customer_names = [
+            name for name in candidate_customers if re.search(r'\b' + re.escape(name) + r'\b', q_lower)
+        ]
+        matched_supplier_names = [
+            name for name in candidate_suppliers if re.search(r'\b' + re.escape(name) + r'\b', q_lower)
+        ]
+
+        # If user explicitly mentions a name which matches candidate list, apply the filter
+        if matched_customer_names:
+            applied_filters.append(f"customer_name:{matched_customer_names}")
+            try:
+                mask = working_ar["Customer Name"].astype(str).str.lower().isin(matched_customer_names)
+                filtered = working_ar[mask]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+                print(f"Applied filter: Customer Name match — {matched_customer_names}")
+            except Exception as e:
+                print(f"⚠️ Skipped Customer Name filter due to: {e}")
+
+        if matched_supplier_names:
+            applied_filters.append(f"supplier_name:{matched_supplier_names}")
+            try:
+                mask = working_ap["Supplier Name"].astype(str).str.lower().isin(matched_supplier_names)
+                filtered = working_ap[mask]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+                print(f"Applied filter: Supplier Name match — {matched_supplier_names}")
+            except Exception as e:
+                print(f"⚠️ Skipped Supplier Name filter due to: {e}")
+    except Exception as e:
+        print(f"⚠️ Name-matching step failed: {e}")
+
+    # ------- 4) Discount / Penalty filter -------
+    if any(k in q_lower for k in ["discount", "rebate", "early payment discount", "discounted"]):
+        applied_filters.append("has_discount")
+        try:
+            if "Discount" in working_ar.columns:
+                working_ar = working_ar[working_ar["Discount"].notna() & (working_ar["Discount"].astype(str).str.strip() != "")]
+            else:
+                working_ar = pd.DataFrame(columns=working_ar.columns)  # Empty it
+
+            if "Discount" in working_ap.columns:
+                working_ap = working_ap[working_ap["Discount"].notna() & (working_ap["Discount"].astype(str).str.strip() != "")]
+            else:
+                working_ap = pd.DataFrame(columns=working_ap.columns)
+            print("Applied filter: discount/rebate")
+        except Exception as e:
+            print(f"⚠️ Skipped discount filter due to: {e}")
+
+    if any(k in q_lower for k in ["penalty", "late fee", "late_fee", "penalised", "penalized", "penaltized", "penalty invoices", "late fee applied", "penalty suitable", "incur a penalty", "incur penalty"]):
+        applied_filters.append("has_penalty")
+        print("Filtering for penalty-related invoices...")
+        try:
+            if "Penalty" in working_ar.columns:
+                ar_has_penalty = (
+                    working_ar["Status"].str.contains("overdue", case=False, na=False) &
+                    working_ar["Penalty"].notna()
+                )
+                working_ar = working_ar[ar_has_penalty]
+            else:
+                working_ar = pd.DataFrame(columns=working_ar.columns)
+
+            if "Penalty" in working_ap.columns:
+                ap_has_penalty = (
+                    working_ap["Status"].str.contains("overdue", case=False, na=False) &
+                    working_ap["Penalty"].notna()
+                )
+                working_ap = working_ap[ap_has_penalty]
+            else:
+                working_ap = pd.DataFrame(columns=working_ap.columns)
+            
+            ap_cols_to_use = AP_OVERDUE_COLS
+            print(f"Penalty AR rows: {len(working_ar)}, Penalty AP rows: {len(working_ap)}")
+
+        except Exception as e:
+            print(f"⚠️ Skipped penalty filter due to: {e}")
+
+    # ------- 5) Additional fallback date-based filters (optional but preserves original intent) -------
+    # Preserve the ability to query "due this week" by date comparison if no explicit status column matched
+    try:
+        if any(k in q_lower for k in ["this week", "next 7 days", "due this week", "due in the next 7 days"]) and ("Due Date" in working_ap.columns or "Due Date" in working_ar.columns):
+            applied_filters.append("date:next_7_days")
+            start_date = today
+            end_date = next_week
+            if "Due Date" in working_ar.columns and not working_ar.empty:
+                filtered = working_ar[(working_ar["Due Date"].dt.date >= start_date) & (working_ar["Due Date"].dt.date <= end_date)]
+                working_ar = safe_filter_df(working_ar, filtered, strict_mode)
+            if "Due Date" in working_ap.columns and not working_ap.empty:
+                filtered = working_ap[(working_ap["Due Date"].dt.date >= start_date) & (working_ap["Due Date"].dt.date <= end_date)]
+                working_ap = safe_filter_df(working_ap, filtered, strict_mode)
+            print("Applied filter: due within next 7 days (date-based)")
+    except Exception as e:
+        print(f"⚠️ Skipped date-based filter due to: {e}")
+
+    # -----------------------------
+    # STRICT STATUS FILTER ENFORCEMENT
+    # (For upcoming / overdue / future queries return ZERO rows if none found)
+    # -----------------------------
+    if strong_status_query:
+        print(f"🔒 Strict status mode enabled for: {strong_status_query}")
+
+        # Hard-filter strictly — do not fallback
+        if strong_status_query == "upcoming":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("upcoming", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("upcoming", case=False, na=False)]
+            ap_cols_to_use = AP_UPCOMING_COLS
+        elif strong_status_query == "overdue":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("overdue", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("overdue", case=False, na=False)]
+            ap_cols_to_use = AP_OVERDUE_COLS
+        elif strong_status_query == "future":
+            if "Status" in ar_df.columns:
+                working_ar = ar_df[ar_df["Status"].str.contains("future", case=False, na=False)]
+            if "Status" in ap_df.columns:
+                working_ap = ap_df[ap_df["Status"].str.contains("future", case=False, na=False)]
+            ap_cols_to_use = AP_UPCOMING_COLS
+
+        # If no matches at all → return empty
+        if working_ar.empty and working_ap.empty:
+            print("🔍 No invoices match the requested status — returning zero rows.")
+            return "No invoices match the requested status."
+            
+    # DONE: unified filter chain applied. Log summary
+    print(f"Filters applied in order: {applied_filters}")
+    print(f"Post-filter AR rows: {len(working_ar)}, Post-filter AP rows: {len(working_ap)}")
+
+    # Final filtered dfs
+    ar_filtered = working_ar.copy()
+    ap_filtered = working_ap.copy()
+
+    # Ensure selected columns exist in the dataframe before selection
+    ap_cols_exist = [col for col in ap_cols_to_use if col in ap_filtered.columns]
+    ar_cols_exist = [col for col in ar_cols_to_use if col in ar_filtered.columns]
+    
+    ap_filtered = ap_filtered[ap_cols_exist]
+    ar_filtered = ar_filtered[ar_cols_exist]
+
+    # Step 8 — Prepare Markdown tables
+    ap_csv = ap_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ap_filtered.empty else ""
+    ar_csv = ar_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ar_filtered.empty else ""
+
+    # Step 8 — Prepare CSV and document contexts
+    def truncate(txt, max_len=6000):
         return txt[:max_len] + "..." if len(txt) > max_len else txt
 
-    ar_csv, ap_csv = truncate(ar_filtered.to_csv(index=False)), truncate(
-        ap_filtered.to_csv(index=False)
-    )
-    po_text, reg_text = truncate(po_text), truncate(reg_text)
+    po_text = truncate(po_text)
+    reg_text = truncate(reg_text)
 
-    # Step 6: Build full context
+    # Step 9 — Compose RAG context
     context = f"""
-Accounts Receivable (AR) Data:
-{ar_csv}
-
-Accounts Payable (AP) Data:
-{ap_csv}
-
-Purchase Order Terms:
-{po_text}
-
-Regulatory Context:
-{reg_text}
-
-Retrieved Context (Top Matches):
+Top Retrieved Context:
 {top_matches}
 """
 
@@ -235,8 +519,8 @@ Retrieved Context (Top Matches):
         ]
     )
 
-    # Step 7: Template formatting
-    template = load_template(template_name)
+    # Step 10 — Format LLM Prompt
+    template = RAG_CHATBOT_PROMPT
     now_str = datetime.now().strftime("%Y-%m-%d")
     next_week_str = next_week.strftime("%Y-%m-%d")
 
@@ -246,11 +530,62 @@ Retrieved Context (Top Matches):
     prompt = template.format(
         context=context,
         query=query,
+        Only_AR=ar_csv,
+        Only_AP=ap_csv,
         AR_context=AR_context,
         AP_context=AP_context,
         regulations_context=reg_text,
         PO_context=po_text,
     )
 
-    # Step 8: Call LLM (Runpod / vLLM)
-    return call_vllm(prompt, max_tokens=1024)
+    # Step 11 — Run LLM Call via RunPod/vLLM
+    print("🧠 Sending contextualized query to LLM...")
+    response = call_vllm(prompt, max_tokens=1024)
+    print("✅ Response received.\n")
+
+    return response
+
+# ---------------------------------------------------------------------------
+# Prompt Template Loader
+# ---------------------------------------------------------------------------
+
+
+def load_template(template_name: str) -> str:
+    """Load the selected template from insights.json."""
+    try:
+        with open("prompts/insights.json", "r") as f:
+            templates = json.load(f)
+        return templates.get(template_name, templates.get("qa_template", ""))
+    except Exception as e:
+        print(f"⚠️ Error loading prompt template: {e}")
+        return ""
+
+def query_insights(query: str, data_context: str, template_name: str):
+    """
+    Lightweight query function for structured insight generation (warnings/opportunities)
+    that bypasses full RAG context to prevent unwanted markdown or table formatting.
+    """
+    print(f"\n🔍 Running RAG Query: {query}\n")
+
+    # Step 1 — Ensure data freshness
+    check_and_update_data()
+    q_lower = query.lower()
+
+    # Load the strict plain-text template
+    template = load_template(template_name)
+
+    # Build a minimal, controlled prompt (no CSV tables or regulatory context)
+    prompt = template.format(
+        query=query,
+        context=data_context,
+        AR_context=data_context,
+        AP_context=data_context,
+        regulations_context="",
+        PO_context="",
+    )
+
+    # Send to LLM
+    response = call_vllm(prompt, max_tokens=512)
+    print("✅ Query Insights response received.\n")
+
+    return response

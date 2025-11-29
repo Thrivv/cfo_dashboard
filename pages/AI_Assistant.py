@@ -6,8 +6,7 @@ import time
 from services.chat_services import process_financial_question, is_table_response, classify_question
 from services.forecast_services import create_forecast_chart, run_forecast_job, generate_chatbot_forecast_insights
 from services.query_doc import query_documents
-from utils import get_data_loader, save_chat_message
-
+from utils.database import save_chat_message
 
 def suggest_questions():
     """Provide CFO-focused actionable example prompts organized by category."""
@@ -24,8 +23,10 @@ def suggest_questions():
         "Generate a forecast for Sales department",
         "Create a forecast for HR department",
         # RAG DOCUMENT ANALYSIS - Invoice & Payment Data
-        "What are the important considerations from retail system services and Card schemes regulations",
-        "What are the capital requirements?",
+        "What are the upcoming invoices?",
+        "What are the overdue invoices",
+        "What are the retail system services and Card schemes regulations",
+        "What are the important conditions mentioned in Purchase order?",
     ]
 
 
@@ -43,6 +44,10 @@ def is_rag_question(question):
     """Check if the question is asking for document/invoice/regulation analysis."""
     rag_keywords = [
         "invoice",
+        "invoices",
+        "rebate summary",
+        "rebate rule summary",
+        "rebate",
         "payment",
         "overdue",
         "regulation",
@@ -50,18 +55,24 @@ def is_rag_question(question):
         "warning",
         "opportunity",
         "account receivable",
+        " ap ",
+        " ar ",
         "account payable",
         "receivables",
         "payables",
         "purchase orders",
-        "po",
+        "purchase order",
+        " po ",
         "terms and conditions",
         "t&c",
         "discount",
         "penalty",
         "late fee",
+        "retail payment system",
         "retail payment",
+        "retail payemnt system service"
         "card scheme",
+        "card scheme regulation",
         "compliance",
         "due date",
         "settlement",
@@ -69,13 +80,13 @@ def is_rag_question(question):
         "supplier",
         "vendor",
         "customer",
+        "customers",
         "payment schedule",
         "extended terms",
         "regulatory requirement",
         "reporting requirement",
         "internal control",
         "rps",
-        "penal interest",
         "interest charge",
         "late payment",
         "guarantee",

@@ -66,14 +66,59 @@ def render():
     data_loader = get_data_loader()
     raw_df = data_loader.get_raw_data()
 
+    # Load and process liquidity forecast data
+    liquidity_df = pd.read_csv("data/liquidity_forecast.csv")
+    liquidity_df["date"] = pd.to_datetime(liquidity_df["date"], format="%m/%d/%Y")
+    liquidity_df = liquidity_df.set_index("date").sort_index()
+
     if raw_df is not None and not raw_df.empty:
+        # Full-width Liquidity Forecasting Chart
+        st.markdown(
+            '<div class="chart-container"><div class="section-title">Cashflow Forecasting</div>',
+            unsafe_allow_html=True,
+        )
+        # Filter for cash_balance
+        cash_balance_df = liquidity_df[["cash_balance"]]
+
+        # Create Plotly chart
+        fig_cash_balance = go.Figure()
+        fig_cash_balance.add_trace(
+            go.Scatter(
+                x=cash_balance_df.index,
+                y=cash_balance_df["cash_balance"],
+                mode="lines",
+                name="Cash Balance",
+                line=dict(color="#2ecc71", width=3),  # Increased line width
+            )
+        )
+
+        # Add markers for the first of each month
+        first_of_month_df = cash_balance_df[cash_balance_df.index.day == 1]
+        if not first_of_month_df.empty:
+            fig_cash_balance.add_trace(
+                go.Scatter(
+                    x=first_of_month_df.index,
+                    y=first_of_month_df["cash_balance"],
+                    mode="markers",
+                    name="Monthly Start",
+                    marker=dict(symbol="circle", size=10, color="white",
+                                line=dict(width=2, color="#2ecc71")),
+                )
+            )
+
+        fig_cash_balance = _apply_plot_theme(
+            fig_cash_balance, height=500, title="Cashflow Forecasting"
+        )
+        st.plotly_chart(fig_cash_balance, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
         # Page Header
         st.markdown(
             '<div class="panel"><div class="section-title">Revenue Forecasting</div>',
             unsafe_allow_html=True,
         )
 
-        #Department selection for all charts
+        # Department selection for all charts
         departments = [
             "Finance",
             "Sales",
@@ -89,7 +134,7 @@ def render():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-       # Two Column Layout for Charts
+        # Two Column Layout for Charts
         col1, col2 = st.columns(2)
 
         with col1:
@@ -248,6 +293,8 @@ def render():
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
         # AI Forecasting Section - Full Width
         st.markdown(
             '<div class="panel"><div class="section-title">Revenue Forecasting with LagLlama</div>',
@@ -345,7 +392,7 @@ def render():
                 ),  # Convert to Timestamp for graph_services
             )
             if fig:
-                    st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info(
                     "No chartable forecast data found for the selected display range."

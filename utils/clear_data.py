@@ -17,6 +17,16 @@ from utils.config import (
 )
 
 
+def clear_qdrant_collection(collection_name: str):
+    """Deletes a specific collection from Qdrant."""
+    try:
+        client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+        client.delete_collection(collection_name=collection_name)
+        print(f"✅ Deleted Qdrant collection: {collection_name}")
+    except Exception as e:
+        print(f"⚠️ Could not delete Qdrant collection {collection_name}. Error: {e}")
+
+
 def clear_all_qdrant():
     """Deletes all collections (and their vectors + metadata) in Qdrant."""
     try:
@@ -28,9 +38,7 @@ def clear_all_qdrant():
             return
 
         for coll in collections:
-            name = coll.name
-            client.delete_collection(collection_name=name)
-            print(f"✅ Deleted Qdrant collection: {name}")
+            clear_qdrant_collection(coll.name)
 
         print("✅ All Qdrant collections deleted (vectors + metadata removed).")
 

@@ -11,6 +11,7 @@ import streamlit as st
 from components.data_filter import apply_filters, get_filter_summary, validate_filters, parse_date_column
 from services.forecast_services import ForecastPreviewService
 from utils import get_data_loader
+from services.due_tables import get_invoice_summary, generate_due_tables
 
 
 def _clear_cache():
@@ -351,33 +352,41 @@ def render():
                 col1, col2, col3 = st.columns(3)
 
                 with col1:
-                    if "error" not in payables_receivables:
-                        ap = payables_receivables["payables"]
-                        ar = payables_receivables["receivables"]
-                        net_pos = payables_receivables["net_position"]
-                        ap_trend = payables_receivables["payables_trend"]
-                        ar_trend = payables_receivables["receivables_trend"]
-                        ap_strength = payables_receivables.get("ap_trend_strength", 50)
-                        ar_strength = payables_receivables.get("ar_trend_strength", 50)
+                    due_data = generate_due_tables()
+
+                    if "error" not in due_data:
+                        ar_df = due_data["AR_df"]
+                        ap_df = due_data["AP_df"]
+                        summary_data = get_invoice_summary(ar_df, ap_df)
+
+                        ap_total = summary_data["ap_total"]
+                        ar_total = summary_data["ar_total"]
+                        total_invoice_amount = ap_total + ar_total
 
                         st.markdown(
                             f"""
-                        <div class="kpi">
-                            <div class="label">Monthly Payables vs Receivables</div>
-                            <div class="value">${net_pos:,.0f}</div>
+                            <div class="kpi">
+                                <div class="label">Total Invoice Amount (AR + AP)</div>
+                            <div class="value">${total_invoice_amount:,.0f} AED</div>
                             <div style="font-size: 0.8rem; color: #9aa3ab; margin-top: 4px;">
-                                AP: ${ap:,.0f} ({ap_trend:+.1f}%) [{ap_strength:.0f}/100]<br/>
-                                AR: ${ar:,.0f} ({ar_trend:+.1f}%) [{ar_strength:.0f}/100]
+                                AP: ${ap_total:,.0f} AED<br/>
+                                AR: ${ar_total:,.0f} AED
                             </div>
-                        </div>
-                        """,
+                            </div>
+                            """,
                             unsafe_allow_html=True,
-                        )
+                           )
                     else:
                         st.markdown(
-                            '<div class="kpi"><div class="label">Payables vs Receivables</div><div class="value">N/A</div></div>',
-                            unsafe_allow_html=True,
+                        """
+                        <div class="kpi">
+                            <div class="label">Total Invoice Amount (AR + AP)</div>
+                            <div class="value">N/A</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
                         )
+
 
                 with col2:
                     if "error" not in revenue_forecast:

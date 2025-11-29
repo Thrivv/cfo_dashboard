@@ -1,15 +1,23 @@
-"""Insights page for financial analysis and reporting."""
+"Insights page for financial analysis and reporting."
 
 import os
 import sys
 
 import plotly.express as px
 import streamlit as st
+import pandas as pd
 
 # Add RAG directory to path for due tables and insights
 sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "RAG"))
+    0,
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "RAG")),
 )
+# Add project root to path for utils
+sys.path.insert(
+    0,
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+)
+
 from services.due_tables import (
     generate_due_tables,
     get_AP_risk_data,
@@ -18,6 +26,7 @@ from services.due_tables import (
     view_risk_invoices,
 )
 from services.generate_insights import generate_insights
+from utils.AR_forecast import get_ar_warnings_and_unpaid_invoices, get_opportunity_insights
 
 
 @st.cache_data(ttl=86400)
@@ -183,6 +192,33 @@ def render():
                     st.info("No new warnings.")
         except Exception as e:
             st.error(f"An error occurred while generating AI insights: {e}")
+        
+    st.subheader("Account receivable Forecasting Insights")
+
+    # Display AR Forecast Warnings and Opportunities
+    st.write("---") # Separator
+    st.subheader("AR Forecasted Warnings and Opportunities")
+    
+    warnings_data, unpaid_invoices_df = get_ar_warnings_and_unpaid_invoices()
+    
+    if warnings_data:
+        st.write("### AR Forecasted Warnings")
+        warnings_df = pd.DataFrame(warnings_data)
+        st.dataframe(warnings_df, use_container_width=True)
+    else:
+        st.info("No significant AR warnings at this time.")
+
+    if not unpaid_invoices_df.empty:
+        st.write("### High amount Customer Payment Opportunities")
+        opportunity_insights = get_opportunity_insights(unpaid_invoices_df)
+        if opportunity_insights:
+            # Convert list of dictionaries to DataFrame for Streamlit display
+            opportunities_df = pd.DataFrame(opportunity_insights)
+            st.dataframe(opportunities_df, use_container_width=True)
+        else:
+            st.info("No new payment opportunities identified.")
+    else:
+        st.info("No unpaid invoices available to identify payment opportunities.")
 
 
 if __name__ == "__main__":

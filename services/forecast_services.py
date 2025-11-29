@@ -38,6 +38,27 @@ def run_forecast_job(prompt, sampling_params=None):
         return "Job timed out. Please try again."
     except Exception as e:
         return f"Error: {str(e)}"
+    
+def run_insight_job(prompt):
+    """Submit a job to the RAG application for financial analysis.
+
+    Args:
+        prompt (str): User query or financial question
+    """
+    try:
+        run_request = endpoint.run_sync(
+            {
+                "prompt": prompt,
+                "application": "RAG",
+                "sampling_params": {"temperature": 0.1, "max_tokens": 512},
+            },
+            timeout=180,  # Timeout in seconds
+        )
+        return run_request
+    except TimeoutError:
+        return "Job timed out. Please try again."
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 class ForecastPreviewService:
@@ -437,11 +458,18 @@ Recent Values:
         Actual Revenue Range: ${hist_min:,.0f} - ${hist_max:,.0f}
         """
 
+    # prompt = f""""Analyze the forecast data and provide concise business insights for the {department} department.
+    # Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
+    # If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that might justify this prediction.\n• If the forecast data as per historical data, show the historical trends.\n• If the forecast data shows an abnormality, justify it with possible reasons based on historical data.\n\n
+    # \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justify it against historical data]\n👉 [Insight 2 with specific values, elaborately justify the reason of the finding]\n 👉 [Insight 3 with specific values, provide breif explaination of the resason of abnormality or historical trends]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
+    # RULES:\n• Use exact values from the data.\n• MAXIMUM 90 WORDS for Key Findings - count and stop at 90.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• Forecast data values generated are expected values, always justify it.\n• EXACTLY 3 insights in Key Findings.\n• Be extremely brief and direct.\n• Focus on key trends only.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts.\n
+    # • The Conclusion must be a concise summary (2-3 sentences)."""
+
     prompt = f""""Analyze this forecast data and provide concise business insights for the {department} department.
     Justify the peak or unexpected trends by comparing the forecast data to the actual values of the past 2 years of historical data provided.
     If an abnormality of trend is noticed on a certain date, provide necessary information, skim through the historical context and breifly explain the factors that might justify this prediction.
     \n\n{data_summary}\n{historical_summary}\nProvide insights in this format:\nKey Findings:\n👉 [Insight 1 with specific values, justify it against historical data]\n👉 [Insight 2 with specific values, justified, explained the resason of abnormality]\n👉 [Insight 3 with specific values, explain possible reason of trend]\n\nConclusion:\n[2-3 sentence summary of the key findings and their implications based on historical context.]\n\n
-    RULES:\n• Use exact values from the data.\n• MAXIMUM 200 WORDS for Key Findings - count and stop at 200.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• EXACTLY 3 insights in Key Findings.\n• Be extremely brief without ambigious tone\n• Focus on key trends only.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts."""
+    RULES:\n• Use exact values from the data.\n• MAXIMUM 200 WORDS for Key Findings - count and stop at 200.\n• Use arrows (👉) for Key Findings.\n• Each arrow item must be on a separate line.\n• EXACTLY 3 insights in Key Findings.\n• Be extremely brief without ambigious tone\n• Focus on key trends only do not use unexpected words in insights.\n• Output must be plain text only — no Markdown, no LaTeX, no styled fonts."""
     return prompt
 
 
@@ -502,7 +530,6 @@ def generate_llm_forecast_insights(
         str: LLM-generated insights about the forecast.
     """
     try:
-        from services.chat_services import run_chatbot_job
 
         df = parse_forecast_data(forecast_data)
         if df is None or df.empty:
@@ -519,7 +546,7 @@ def generate_llm_forecast_insights(
         prompt = _prepare_llm_prompt(department, df, historical_df_dep)
 
         for attempt in range(max_retries):
-            llm_response = run_chatbot_job(prompt)
+            llm_response = run_insight_job(prompt)
 
             if isinstance(llm_response, dict) and "generated_text" in llm_response:
                 insights = llm_response["generated_text"]
@@ -540,8 +567,6 @@ def generate_chatbot_forecast_insights(
     forecast_data: str, department: str, max_retries: int = 3
 ) -> str:
     try:
-        from services.chat_services import run_chatbot_job
-
         df = parse_forecast_data(forecast_data)
         if df is None or df.empty:
             return "Unable to generate insights: No forecast data available."
@@ -600,7 +625,7 @@ Recent Values:
         • The Conclusion must be a concise summary (2-3 sentences)."""
 
         for attempt in range(max_retries):
-            llm_response = run_chatbot_job(prompt)
+            llm_response = run_insight_job(prompt)
 
             if isinstance(llm_response, dict) and "generated_text" in llm_response:
                 insights = llm_response["generated_text"]
