@@ -471,6 +471,10 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     ar_filtered = working_ar.copy()
     ap_filtered = working_ap.copy()
 
+    # Get counts for the prompt context
+    ar_count = len(ar_filtered)
+    ap_count = len(ap_filtered)
+
     # Ensure selected columns exist in the dataframe before selection
     ap_cols_exist = [col for col in ap_cols_to_use if col in ap_filtered.columns]
     ar_cols_exist = [col for col in ar_cols_to_use if col in ar_filtered.columns]
@@ -479,8 +483,13 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
     ar_filtered = ar_filtered[ar_cols_exist]
 
     # Step 8 — Prepare Markdown tables
-    ap_csv = ap_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ap_filtered.empty else ""
-    ar_csv = ar_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ar_filtered.empty else ""
+    ap_table = ap_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ap_filtered.empty else ""
+    ar_table = ar_filtered.to_markdown(index=False, missingval='-', numalign="left", stralign="left") if not ar_filtered.empty else ""
+    
+    # Add counts to the CSV strings to be passed to the LLM
+    ap_csv = f"Found {ap_count} matching invoices.\n\n{ap_table}" if ap_table else "No matching AP invoices found."
+    ar_csv = f"Found {ar_count} matching invoices.\n\n{ar_table}" if ar_table else "No matching AR invoices found."
+
 
     # Step 8 — Prepare CSV and document contexts
     def truncate(txt, max_len=6000):

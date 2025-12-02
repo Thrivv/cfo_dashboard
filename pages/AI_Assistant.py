@@ -1,12 +1,187 @@
-"""AI Assistant page with modern chat interface for financial queries."""
-
 import streamlit as st
 import time
+import numpy as np
+from typing import Dict, Tuple
 
 from services.chat_services import process_financial_question, is_table_response, classify_question
 from services.forecast_services import create_forecast_chart, run_forecast_job, generate_chatbot_forecast_insights
 from services.query_doc import query_documents
 from utils.database import save_chat_message
+
+# Embedding / similarity tools
+try:
+    from sentence_transformers import SentenceTransformer
+    from numpy.linalg import norm
+except Exception:
+    SentenceTransformer = None
+    norm = None
+
+# --- Configuration: example queries per bucket ---
+EXAMPLES_BY_BUCKET = {
+    "RAG": [
+        "What are the retail system services and Card schemes regulations",
+        "Show me important conditions mentioned in Purchase order",
+        "What are the rebate rules for vendor X",
+        "List compliance requirements for card scheme settlement",
+        "Find contract T&Cs related to late fee and penalty",
+        "What are the upcoming invoices?",
+        "What are the overdue invoices",
+        "What are the retail system services and Card schemes regulations",
+        "What are the important conditions mentioned in Purchase order?"
+    ],
+    "FORECAST": [
+        "Generate a forecast for Sales department",
+        "Create a forecast for HR department",
+        "Forecast next quarter revenue",
+        "Predict sales pipeline for next 6 months",
+        "What will be the trend for cash balance next year?"
+    ],
+    "FINANCIAL": [
+        "What are our revenue trends?",
+        "What is our profit margin?",
+        "Compare revenue vs expenses by quarter",
+        "Show me profit margin trends over time",
+        "Compare our performance across departments"
+    ],
+}
+
+GREETING_KEYWORDS = [
+        "hi", "hii", "hey there", "hii...", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "greetings", "howdy", "what's up", "sup", "yo", "hi...", "who are you", "what is your name","how are you",
+        "what can you do for me", "what can you do for me","what do you do", "what do you know", "what do you think",
+]
+
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
+# Precompute embeddings cache
+_EMBED_MODEL = None
+_EXAMPLE_EMBS: Dict[str, np.ndarray] = {}
+
+# Thresholds
+SEMANTIC_SIM_THRESHOLD = 0.68  # tuned; fall back to LLM if below
+TOP_K = 3  # for nearest example check
+
+# Quick regex / keyword markers for fast routing (hybrid)
+FORECAST_KEYWORDS = [
+    "forecast", "predict", "projection", "scenario", "what will", "next quarter", "next month",
+    "next year", "trend for", "predicting", "will be", "forecast for"
+]
+DB_QUERY_KEYWORDS = [
+    "invoice", "invoices", "rebate summary", "rebate rule summary", "rebate", "payment", "overdue", "warning", "opportunity", "account receivable", " ap ",
+" ar ", "account payable", "receivables", "payables", "discount", "penalty", "late fee", "due date", "settlement", "supplier", "vendor", "customer",
+"customers", "payment schedule", "interest charge", "late payment",
+]
+RAG_KEYWORDS = [
+    "regulation", "license", "purchase orders", "purchase order", " po ", "terms and conditions", "t&c","retail payment system", "retail payment",
+"retail payemnt system service", "card scheme", "card scheme regulation", "compliance", "financial obligation", "extended terms", 
+"regulatory requirement", "reporting requirement", "internal control", "rps", "guarantee", "reminder notice", "capital requirements",
+]
+
+def _init_embedding_model():
+    """Load embedding model once."""
+    global _EMBED_MODEL, _EXAMPLE_EMBS
+    if _EMBED_MODEL is not None:
+        return
+    if SentenceTransformer is None:
+        _EMBED_MODEL = None
+        return
+    _EMBED_MODEL = SentenceTransformer(EMBEDDING_MODEL)
+    # compute example embeddings
+    for bucket, examples in EXAMPLES_BY_BUCKET.items():
+        embs = _EMBED_MODEL.encode(examples, convert_to_numpy=True, show_progress_bar=False)
+        _EXAMPLE_EMBS[bucket] = embs
+
+
+def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
+    if a is None or b is None:
+        return 0.0
+    denom = (norm(a) * norm(b))
+    return float(np.dot(a, b) / denom) if denom != 0 else 0.0
+
+
+def semantic_route(question: str) -> Tuple[str, float]:
+    """
+    Semantic routing: embed the question and compute nearest bucket by
+    mean/nearest-example cosine similarity. Returns (bucket, score).
+    """
+    if _EMBED_MODEL is None:
+        return ("UNKNOWN", 0.0)
+    q_emb = _EMBED_MODEL.encode([question], convert_to_numpy=True)[0]
+    best_bucket = "UNKNOWN"
+    best_score = 0.0
+    for bucket, ex_embs in _EXAMPLE_EMBS.items():
+        # compute similarity to top-K nearest example in the bucket
+        sims = [ _cosine_sim(q_emb, ex) for ex in ex_embs ]
+        # take mean of top-K
+        topk = sorted(sims, reverse=True)[:TOP_K]
+        score = float(np.mean(topk)) if len(topk) > 0 else 0.0
+        if score > best_score:
+            best_score = score
+            best_bucket = bucket
+    return best_bucket, best_score
+
+
+def quick_regex_route(question: str) -> Tuple[str, float]:
+    """
+    Fast deterministic check using keywords - returns (bucket, confidence_score).
+    """
+    q = question.lower()
+    # Greetings
+    if q.strip() in GREETING_KEYWORDS or q.startswith(("hi ", "hello ", "hey ")):
+        return ("GREETING", 1.0)
+    # Forecast priority
+    for kw in FORECAST_KEYWORDS:
+        if kw in q:
+            return ("FORECAST", 0.95)
+    # DB / invoice queries are grouped into RAG
+    for kw in DB_QUERY_KEYWORDS:
+        if kw in q:
+            return ("RAG", 0.9)
+    # RAG keywords (policies/regulations)
+    for kw in RAG_KEYWORDS:
+        if kw in q:
+            return ("RAG", 0.9)
+    return ("UNKNOWN", 0.0)
+
+
+def llm_classify_route(question: str) -> Tuple[str, float]:
+    """
+    Deterministic LLM classifier fallback. Returns (bucket, score).
+    """
+    # Placeholder for a deterministic LLM call.
+    # For now, we can use the existing 'classify_question' as a starting point,
+    # but this should be replaced with a proper classification prompt.
+    classification = classify_question(question)
+    if classification == "NON_FINANCIAL":
+        return "UNKNOWN", 0.9
+    
+    # This is a simplified logic. A real implementation would have a prompt
+    # that returns one of 'RAG', 'FORECAST', 'FINANCIAL'.
+    # We will just default to FINANCIAL for demonstration.
+    return "FINANCIAL", 0.7
+
+
+def route_question(question: str) -> str:
+    """
+    Orchestrates the routing of a question.
+    1. Quick regex check
+    2. Semantic search
+    3. LLM classification as fallback
+    """
+    # 1. Quick regex route
+    bucket, score = quick_regex_route(question)
+    if bucket != "UNKNOWN":
+        return bucket
+
+    # 2. Semantic route
+    bucket, score = semantic_route(question)
+    if score >= SEMANTIC_SIM_THRESHOLD:
+        return bucket
+
+    # 3. LLM classification fallback
+    bucket, score = llm_classify_route(question)
+    return bucket
+
 
 def suggest_questions():
     """Provide CFO-focused actionable example prompts organized by category."""
@@ -29,101 +204,16 @@ def suggest_questions():
         "What are the important conditions mentioned in Purchase order?",
     ]
 
-
-def is_forecast_question(question):
-    """Check if the question is asking for forecasting."""
-    forecast_keywords = [
-        "generate a forecast",
-        "create a forecast",
-    ]
-    question_lower = question.lower()
-    return any(keyword in question_lower for keyword in forecast_keywords)
-
-
-def is_rag_question(question):
-    """Check if the question is asking for document/invoice/regulation analysis."""
-    rag_keywords = [
-        "invoice",
-        "invoices",
-        "rebate summary",
-        "rebate rule summary",
-        "rebate",
-        "payment",
-        "overdue",
-        "regulation",
-        "license",
-        "warning",
-        "opportunity",
-        "account receivable",
-        " ap ",
-        " ar ",
-        "account payable",
-        "receivables",
-        "payables",
-        "purchase orders",
-        "purchase order",
-        " po ",
-        "terms and conditions",
-        "t&c",
-        "discount",
-        "penalty",
-        "late fee",
-        "retail payment system",
-        "retail payment",
-        "retail payemnt system service"
-        "card scheme",
-        "card scheme regulation",
-        "compliance",
-        "due date",
-        "settlement",
-        "financial obligation",
-        "supplier",
-        "vendor",
-        "customer",
-        "customers",
-        "payment schedule",
-        "extended terms",
-        "regulatory requirement",
-        "reporting requirement",
-        "internal control",
-        "rps",
-        "interest charge",
-        "late payment",
-        "guarantee",
-        "reminder notice",
-        "capital requirements",
-    ]
-    question_lower = question.lower()
-    return any(keyword in question_lower for keyword in rag_keywords)
-
-
-def is_greeting(question):
-    """Check if the question is a simple greeting."""
-    greeting_keywords = [
-        "hi", "hii", "hey there", "hii...", "hello", "hey", "good morning", "good afternoon", "good evening",
-        "greetings", "howdy", "what's up", "sup", "yo", "hi...", "who are you", "what is your name","how are you",
-        "what can you do for me", "what can you do for me","what do you do", "what do you know", "what do you think",
-    ]
-    question_lower = question.lower().strip()
-    return question_lower in greeting_keywords or question_lower.startswith(("hi ", "hello ", "hey "))
-
-
 def process_question(question):
     """Process a question using routing for financial analysis, forecasting, and RAG document analysis."""
     try:
-        # Check for greetings first
-        if is_greeting(question):
+        # Route the question to the appropriate category
+        category = route_question(question)
+
+        if category == "GREETING":
             return "Hello! I'm Kraya, your financial AI assistant. I'm here to help you with financial analysis, forecasting, and document insights. How can I assist you today?"
         
-        # Use LLM to classify if question is financial/business related
-        classification = classify_question(question)
-        
-        # If not financial, return appropriate message
-        if classification == "NON_FINANCIAL":
-            return "I don't have data to answer this question. I'm specialized in financial analysis, forecasting, and business insights. Please ask me about revenue trends, profit margins, department performance, or other financial metrics."
-        
-        # Routing based on question content for financial questions
-        if is_forecast_question(question):
+        elif category == "FORECAST":
             # Use forecast service
             response = run_forecast_job(question)
             if response and "forecast_data" in response:
@@ -137,15 +227,17 @@ def process_question(question):
                 }
             else:
                 return "Unable to generate forecast. Please ensure you mention a specific department."
-        elif is_rag_question(question):
+        
+        elif category == "RAG":
             # Use RAG document service for invoice/regulation questions
             try:
                 response = query_documents(question)
                 return f"## Document Analysis\n\n{response}"
             except Exception as e:
                 return f"## Document Analysis\n\nError: {str(e)}. Please try again with a different question."
-        else:
-            # Use chatbot service for financial analysis questions
+
+        elif category == "FINANCIAL":
+             # Use chatbot service for financial analysis questions
             response = process_financial_question(question)
 
             # Handle dict response (extract generated_text if it's a dict)
@@ -155,9 +247,12 @@ def process_question(question):
                 return response
             else:
                 return str(response)
+
+        else: # UNKNOWN or other cases
+            return "I don't have data to answer this question. I'm specialized in financial analysis, forecasting, and business insights. Please ask me about revenue trends, profit margins, department performance, or other financial metrics."
+
     except Exception as e:
         return f"Error processing your question: {str(e)}. Please try again."
-
 
 def extract_department(question):
     """Extract department name from question."""
@@ -168,9 +263,8 @@ def extract_department(question):
             return dept
     return "Unknown"
 
-
-
-
+# Initialize the embedding model and example embeddings on startup
+_init_embedding_model()
 
 def render():
     """Render a modern AI Assistant with native Streamlit chat elements."""

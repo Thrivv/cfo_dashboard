@@ -30,11 +30,25 @@ def generate_insights():
     top_ap_overdue = get_top_ap_overdue(ap_df, top_n=2)
 
     # --- Warnings Generation ---
-    ar_warning_query = f"Based on these overdue AR invoices: {top_ar_overdue}"
-    ar_warnings = query_insights(ar_warning_query, top_ar_overdue, "ar_warning_summary")
+    ar_warnings = "No overdue AR invoices to generate warnings for."
+    if not top_ar_overdue.empty:
+        ar_cols = ['Invoice No.', 'Customer Name', 'Amount (AED)', 'Overdue Days', 'Service Description']
+        # Ensure columns exist before selecting
+        ar_cols_exist = [col for col in ar_cols if col in top_ar_overdue.columns]
+        ar_context_df = top_ar_overdue[ar_cols_exist]
+        ar_context_str = ar_context_df.to_string(index=False)
+        ar_warning_query = "Generate warnings for the provided overdue AR invoices."
+        ar_warnings = query_insights(ar_warning_query, ar_context_str, "ar_warning_summary")
 
-    ap_warning_query = f"Based on these overdue AP invoices: {top_ap_overdue}"
-    ap_warnings = query_insights(ap_warning_query, top_ap_overdue, "ap_warning_summary")
+    ap_warnings = "No overdue AP invoices to generate warnings for."
+    if not top_ap_overdue.empty:
+        ap_cols = ['Invoice No.', 'Supplier Name', 'Amount (AED)', 'Overdue Days', 'Service Description', 'Penalty', 'Penalty Note','Final Amount with Penalty']
+        # Ensure columns exist before selecting
+        ap_cols_exist = [col for col in ap_cols if col in top_ap_overdue.columns]
+        ap_context_df = top_ap_overdue[ap_cols_exist]
+        ap_context_str = ap_context_df.to_string(index=False)
+        ap_warning_query = "Generate warnings for the provided overdue AP invoices."
+        ap_warnings = query_insights(ap_warning_query, ap_context_str, "ap_warning_summary")
 
     # --- Opportunities Generation ---
     ar_opportunity_query = "Based on the following data of top on-time paying customers, generate up to 2 AR opportunities. Each opportunity must be based on a real invoice from the data. Do not invent any details like invoice numbers or amounts. Each opportunity should be a maximum of 3 lines."
