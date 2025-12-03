@@ -1,0 +1,100 @@
+1.​ What is the total actual revenue across all departments from 2015 to 2024?
+2.​ Which department has the highest average actual revenue per period?
+3.​ What is the average budget variance percentage for the Sales department?
+4.​ How does the year-over-year growth percentage trend for the IT department from 2016 to 2023?
+5.​ What is the total gross profit for the Finance department in 2019?
+6.​ Which year had the highest total net income across all departments?
+7.​ How many periods show a negative net income in the HR department?
+8.​ What is the average EBITDA margin percentage for the Marketing department?
+9.​ Compare the actual revenue to budgeted revenue for Operations in 2020.
+10.​What is the maximum debt-to-equity ratio recorded in the dataset?
+11.​What is the total cash inflows for all departments in 2022?
+12.​Which department has the lowest average days sales outstanding (DSO)?
+13.​What is the trend in working capital for the Sales department over the years?
+14.​How many periods have zero gross profit across the entire dataset?
+15.​What is the average return on equity (ROE) for the IT department?
+16.​Which year shows the highest total capital expenditure (CapEx)?
+17.​What is the total order backlog for the HR department in 2018?
+18.​Compare the gross margin percentage between Finance and Marketing departments.
+19.​What is the average cost per employee for the Operations department?
+20.​How does the inventory turnover ratio vary by department?
+21.​What is the total net cash flow for all periods in 2021?
+22.​Which department has the highest average headcount?
+23.​What is the minimum current ratio observed in the dataset?
+24.​How many periods have a positive year-over-year growth in revenue for Sales?
+25.​What is the average operating margin for the IT department in 2023?
+26.​Compare total assets between 2015 and 2024 across all departments.
+27.​What is the total accounts receivable (AR) for Marketing in 2017?
+28.​Which year had the most negative budget variances?
+29.​What is the average return on assets (ROA) for the HR department?
+30.​How does the debt outstanding trend for the Finance department?
+31.​What is the total sales pipeline value for all departments in 2020?
+32.​Which department shows the highest average EBITDA?
+33.​What is the number of periods with negative net cash flow?
+34.​Compare the days payable outstanding (DPO) between IT and Operations.
+35.​What is the total equity for the Sales department in 2019?
+36.​Which year has the highest average gross profit per department?
+37.​What is the average inventory value for the Marketing department?
+38.​How many periods have a debt-to-equity ratio above 2.0?
+39.​What is the trend in operational expenditure (OpEx) for HR from 2016 to 2022?
+40.​Compare net income between 2023 and 2024 for all departments.
+41.​What is the maximum cash balance recorded in the dataset?
+42.​Which department has the lowest average ROE?
+43.​What is the total cost of goods sold (COGS) for IT in 2018?
+44.​How does the EBITDA margin percentage compare across years for Finance?
+45.​What is the average working capital for the Operations department?
+46.​Which periods show the highest year-over-year growth percentage?
+47.​What is the total liabilities for all departments in 2021?
+48.​Compare headcount trends between Sales and Marketing.
+49.​What is the number of periods with positive net income in 2020?
+50.​Which department has the highest average sales pipeline value?
+51.​What is the average current ratio for the HR department?
+52.​How many years show declining total revenue?
+53.​What is the total CapEx for the IT department across all years?
+54.​Compare gross profit between 2015 and 2016 for all departments.
+55.​What is the average DSO for the Finance department?
+56.​Which department has the most periods with zero gross profit?
+57.​What is the trend in return on equity for Marketing over time?
+58.​What is the total order backlog in 2022?
+59.​How does the inventory turnover differ between HR and Sales?
+60.​What is the average net income for periods in 2024?
+61.​Which year has the lowest total cash outflows?
+62.​Compare budget variance percentages across departments.
+63.​What is the maximum ROA recorded for Operations?
+64.​How many periods have a gross margin above 80%?
+65.​What is the total accounts payable (AP) for Sales in 2017?
+66.​Which department shows the highest average cost per employee?
+67.​What is the trend in net cash flow for IT from 2019 to 2023?
+68.​Compare total assets and liabilities for HR in 2020.
+69.​What is the average operating expenses (OPEX) for Finance?
+70.​Which periods have the highest debt-to-equity ratios in Marketing?
+71.​What is the total revenue growth from 2015 to 2024?
+72.​How does the EBITDA compare between Sales and Operations?
+73.​What is the number of negative net income periods in 2018?
+74.​Which department has the highest average gross margin percentage?
+75.​What is the total working capital across all years?
+76.​Compare year-over-year growth for IT and Finance.
+77.​What is the average equity for the Marketing department?
+78.​How many periods show inventory value above 400,000?
+79.​What is the trend in cash balance for Operations?
+80.​Which year has the highest average headcount per department?
+81.​What is the total OpEx for all departments in 2023?
+82.​Compare DPO trends across years for HR.
+83.​What is the maximum sales pipeline value in the dataset?
+84.​Which department has the lowest average inventory turnover?
+85.​What is the average net cash flow for Sales in 2016?
+86.​How does the ROE trend for all departments from 2017 to 2021?
+87.​What is the total debt outstanding for IT in 2019?
+88.​Which periods have current ratios below 1.0?
+89.​What is the average order backlog for Finance?
+90.​Compare gross profit margins between 2020 and 2022."
+91.​What is the number of periods with positive budget variance?
+92.​Which department shows the most variability in revenue?
+93.​What is the total cash inflows in 2015?
+94.​How does the cost per employee trend for Marketing?
+95.​What is the average ROA across all departments?
+96.​Which year has the highest number of negative net income periods?
+97.​What is the total inventory value for Operations in 2024?
+98.​Compare EBITDA margins for HR and IT.
+99.​What is the trend in capital expenditure from 2018 to 2023?
+100.​ Which department has the highest total sales pipeline value over all periods?

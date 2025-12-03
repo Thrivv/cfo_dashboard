@@ -461,7 +461,7 @@ def query_rag(query: str, template_name: str = "qa_template", top_k: int = 20):
         # If no matches at all → return empty
         if working_ar.empty and working_ap.empty:
             print("🔍 No invoices match the requested status — returning zero rows.")
-            return "No invoices match the requested status."
+            return "No Related Invoices match the query."
             
     # DONE: unified filter chain applied. Log summary
     print(f"Filters applied in order: {applied_filters}")

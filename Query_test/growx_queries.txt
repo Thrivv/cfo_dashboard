@@ -1,0 +1,154 @@
+How much cash will I have in 7 / 30 / 90 days?
+Why is my projected cash balance dropping next week?
+Which customers are likely to pay late this month?
+Show me invoices that need follow-up today.
+What is my safe-to-spend limit this week?
+What happens to my cash flow if sales drop by 10%?
+Will I have enough cash for payroll next month?
+What’s driving most of my cash outflow right now?
+Should I delay any vendor payments this week?
+Show my upcoming cash risks for the next 14 days.
+Automatically reconcile all payments from yesterday.
+Why is today’s bank balance not matching the books?
+Classify these 20 uncategorized transactions.
+Flag unusual or suspicious transactions this month.
+What will my VAT/GST liability be this quarter?
+Which invoices have duplicate amounts?
+Are there any anomalies in this month’s expenses?
+Summarize all accounting corrections needed before closing.
+Prepare my month-end close checklist.
+Which entries may require auditor review?
+Which customers pose the highest credit risk today?
+What is the probability that Customer X pays on time?
+Who hasn’t opened the last reminder email?
+Which invoices are at risk of becoming bad debt?
+Generate my daily collections plan.
+Which customers need stricter payment terms?
+Forecast my expected inflows this week.
+What’s my projected DSO this month?
+Which customers always pay late?
+Draft a polite reminder message.
+Which suppliers should I pay first this week?
+Are there any early-payment discounts I’ll miss?
+Who are my most expensive vendors?
+Compare Supplier A vs Supplier B (price + delivery).
+What’s the financial impact if I delay these bills?
+Generate an optimal payment schedule for next 14 days.
+Who are my most reliable suppliers?
+Does Supplier X overcharge me?
+Which purchases are unnecessary?
+Predict my purchase requirements next month.
+Which products will stock out soon?
+What’s causing the drop in sales this week?
+Forecast demand for SKU-123 for next 90 days.
+Which branches are underperforming?
+What’s my most profitable product this month?
+Should I increase the price of Product X?
+Which products have shrinking margins?
+Which items should I discontinue?
+What events or patterns are driving sales peaks?
+Give me a daily sales summary.
+What are my dead-stock items?
+When should I reorder SKU-488?
+How much stock should I buy for next month?
+Which items are overstocked?
+What is the optimal reorder quantity for SKU-X?
+Predict stock needs for holiday season.
+Which products have high return rates?
+What is my expected inventory holding cost?
+Which suppliers cause stock delays?
+Recommend products to bundle.
+Who is likely to resign in the next 60 days?
+Why did overtime jump this month?
+Generate an optimal staffing schedule.
+Who is consistently late or absent?
+Flag anomalies in this payroll cycle.
+Which employees are high-risk for burnout?
+When should I hire next based on forecast?
+Predict next month’s payroll cost.
+Which roles are under or over staffed?
+Who deserves performance-based incentives?
+What is the cheapest way to send this international payment?
+Should I convert AED to USD today?
+How much interest will I save if I transfer funds now?
+Which payment rail should I use for Supplier X?
+Predict my FX exposure this month.
+Give me a one-page business summary for this week.
+What are the biggest risks to my business today?
+What’s hurting my margins right now?
+Which business areas need immediate attention?
+Recommend 5 ways to improve profitability.
+Identify all revenue leakage points.
+What happens if I expand to a new branch?
+Should I open on weekends?
+What’s my customer retention rate?
+What’s my business outlook for next quarter?
+Which customers are at risk of churn?
+What’s driving customer complaints?
+Which promotions are most effective?
+What’s the best time to send marketing messages?
+Recommend customers for upsell/cross-sell.
+Which products should I advertise more?
+What geographic areas should I target?
+Rewrite my marketing message for this campaign.
+Which customer segments spend the most?
+What’s the ROI of my last marketing campaign?
+Generate my daily action list.
+Simplify this complex financial report.
+Create a summary of this month's performance.
+Suggest cost-cutting options.
+What should I focus on today as CEO?
+Which SKUs will sell out this weekend?
+What’s my slowest-moving merchandise?
+Should I run a promotion this week?
+Compare branch performance for the last 7 days.
+How many staff do I need for Friday night?
+Which menu items are least profitable?
+Forecast food consumption for next week.
+Are there any spoilage risks?
+What’s my no-show rate?
+Who are my most profitable customers?
+Predict booking demand for next month.
+Which services should I bundle?
+What’s my optimal purchase quantity for next shipment?
+Predict demand for each distributor region.
+Are any customers over-ordering or under-ordering?
+What is my fleet utilization?
+Why is my conversion rate dropping?
+Which products have high cart abandonment?
+What delivery issues caused delays this week?
+What’s my best-performing ad channel?
+Which items will stock out soon?
+Would you like auto-reorder recommendations?
+Who is likely to resign in the next 30 days?
+Would you like suggested retention steps?
+How is my business doing today?
+Will I run out of cash soon?
+What should I focus on right now?
+Which products/services make me the most money?
+Who owes me money?
+Who should I pay first?
+How can I reduce costs?
+Which customers are most valuable?
+Who is likely to leave my company?
+Am I paying too much for stock?
+What are my business risks?
+What’s my break-even point?
+How much should I reorder?
+What’s my profit this month?
+Why are sales dropping?
+What changed compared to last week?
+What’s my next big expense?
+Who are my best/worst suppliers?
+How do I improve margins?
+Summarize my business in 1 minute.
+“Show me this week’s cash forecast.”
+“What bills should I pay today?”
+“Who owes me money right now?”
+“Which products need restocking?”
+“Why did sales drop yesterday?”
+“Predict tomorrow’s inventory needs.”
+“Create next week’s staffing schedule.”
+“Flag payroll anomalies.”
+“Give me today’s business highlights.”
+“What should I prioritize this morning?”

@@ -1,0 +1,44 @@
+1* show invoices due this week
+2* list AP invoices due in next 7 days
+3* payments to make this week
+4* show overdue AP invoices
+5* AP invoices overdue more than 15 days
+6* list all unpaid supplier invoices
+7* total overdue amount by supplier
+8* suppliers with early payment discount
+9* unpaid invoices eligible for discount
+10* how much discount available this week
+11* invoices with late payment penalty
+12* AP invoices penalized this month
+13* rebate amount earned by supplier from the invoices
+14* customers with unpaid invoices
+15* AR invoices with amount above 50000
+16* list all pending customer payments
+17* overdue AR invoices
+18* show AR invoices past due date
+19* top risky customers
+20* customers with repeated late payments
+21* overdue pattern by customer
+22* top 5 customers by timely payment
+23* list rebate earned this month
+24* invoices eligible for early discount
+25* supplier invoices with penalty clause
+26* rebate condition for Emirates Logistics invoices
+27* invoices that violated PO terms
+28* find rebate rules for Emirates Logistics
+29* relation between overdue invoices and missed rebates
+30* summarize all rebate policies
+31* show AP invoices due
+32* show AR invoices overdue
+33* supplier rebate summary
+34* list overdue invoices
+35* rebate rules summary
+36* invoices with discount
+37* AP penalty invoices
+38* What are Retail payment services 
+39* what are card scheme regulation
+40* AP Invoices that breaches regulations 
+41* payment status of AP-2009
+42* payment status of gulf tech solution for network maintenance service
+43* conditions mentioned in PO
+44* what are retail payment services and card scheme regulations

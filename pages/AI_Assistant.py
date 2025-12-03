@@ -7,6 +7,7 @@ from services.chat_services import process_financial_question, is_table_response
 from services.forecast_services import create_forecast_chart, run_forecast_job, generate_chatbot_forecast_insights
 from services.query_doc import query_documents
 from utils.database import save_chat_message
+from utils.llm_client import call_vllm
 
 # Embedding / similarity tools
 try:
@@ -58,14 +59,17 @@ _EMBED_MODEL = None
 _EXAMPLE_EMBS: Dict[str, np.ndarray] = {}
 
 # Thresholds
-SEMANTIC_SIM_THRESHOLD = 0.68  # tuned; fall back to LLM if below
+SEMANTIC_SIM_THRESHOLD = 0.60  # tuned; fall back to LLM if below
 TOP_K = 3  # for nearest example check
 
 # Quick regex / keyword markers for fast routing (hybrid)
 FORECAST_KEYWORDS = [
-    "forecast", "predict", "projection", "scenario", "what will", "next quarter", "next month",
-    "next year", "trend for", "predicting", "will be", "forecast for"
+    "forecast", "predict", "projection", "scenario", "what will", "next quarter",
+    "next month", "next year", "trend for", "predicting", "will be", "forecast for",
+    "how much cash will", "projected", "projection", "cash in", "cash out",
+    "inflows", "outflows", "what if", "scenario", "simulate", "simulation"
 ]
+
 DB_QUERY_KEYWORDS = [
     "invoice", "invoices", "rebate summary", "rebate rule summary", "rebate", "payment", "overdue", "warning", "opportunity", "account receivable", " ap ",
 " ar ", "account payable", "receivables", "payables", "discount", "penalty", "late fee", "due date", "settlement", "supplier", "vendor", "customer",
@@ -73,7 +77,7 @@ DB_QUERY_KEYWORDS = [
 ]
 RAG_KEYWORDS = [
     "regulation", "license", "purchase orders", "purchase order", " po ", "terms and conditions", "t&c","retail payment system", "retail payment",
-"retail payemnt system service", "card scheme", "card scheme regulation", "compliance", "financial obligation", "extended terms", 
+"retail payemnt system service", "card scheme", "card scheme regulation", "compliance", "financial obligation", "extended terms", " PO ",
 "regulatory requirement", "reporting requirement", "internal control", "rps", "guarantee", "reminder notice", "capital requirements",
 ]
 
@@ -148,20 +152,58 @@ def llm_classify_route(question: str) -> Tuple[str, float]:
     """
     Deterministic LLM classifier fallback. Returns (bucket, score).
     """
-    # Placeholder for a deterministic LLM call.
-    # For now, we can use the existing 'classify_question' as a starting point,
-    # but this should be replaced with a proper classification prompt.
-    classification = classify_question(question)
-    if classification == "NON_FINANCIAL":
-        return "UNKNOWN", 0.9
+    prompt = f"""
+    You are a financial query classification expert. Your task is to classify a given user query into one of three categories: RAG, FORECAST, or FINANCIAL.
+
+    Here are the rules for classification:
+
+    1.  **RAG**: Classify the query as RAG if it is related to any of the following:
+        *   Account receivables
+        *   Payables
+        *   Regulations
+        *   Purchase orders
+        *   Rebates
+
+    2. **FORECAST**: Classify the query as FORECAST if it is related to forecasting, predictions, scenario analysis, what-if modeling, future cash availability,projected balances, projected KPIs, or expected values in a future period.
+
+
+    3.  **FINANCIAL**: Classify the query as FINANCIAL if it pertains to Key Performance Indicator (KPI) analysis. This includes queries about:
+        *   Date / Period
+        *   Business Unit / Department
+        *   Revenue (Actual), Revenue (Budget / Forecast)
+        *   Cost of Goods Sold (COGS)
+        *   Gross Profit
+        *   Operating Expenses (OPEX)
+        *   EBITDA
+        *   Net Income
+        *   Cash Inflows, Cash Outflows, Net Cash Flow, Cash Balance
+        *   Days Sales Outstanding (DSO), Days Payable Outstanding (DPO)
+        *   Working Capital
+        *   Total Assets, Total Liabilities, Equity
+        *   Debt Outstanding, Debt-to-Equity Ratio, Current Ratio
+        *   Budget Variance (%)
+        *   Year-over-Year Growth (%), Return on Equity (ROE), Return on Assets (ROA)
+        *   Gross Margin %, Operating Margin %, EBITDA Margin %
+        *   Inventory Value, Inventory Turnover
+        *   Capital Expenditure (CapEx), Operational Expenditure (OpEx)
+        *   Headcount, Cost per Employee
+        *   Sales Pipeline Value, Order Backlog
+
+    Please respond with only one of the following classifications: RAG, FORECAST, or FINANCIAL.
+
+    Query: "{question}"
+    Classification:
+    """
     
-    # This is a simplified logic. A real implementation would have a prompt
-    # that returns one of 'RAG', 'FORECAST', 'FINANCIAL'.
-    # We will just default to FINANCIAL for demonstration.
-    return "FINANCIAL", 0.7
+    classification = call_vllm(prompt).strip()
+
+    if classification in ["RAG", "FORECAST", "FINANCIAL"]:
+        return classification, 0.9  # High confidence as it's an LLM classification
+    else:
+        return "UNKNOWN", 0.5
 
 
-def route_question(question: str) -> str:
+def route_question(question: str) -> Tuple[str, str]:
     """
     Orchestrates the routing of a question.
     1. Quick regex check
@@ -171,16 +213,16 @@ def route_question(question: str) -> str:
     # 1. Quick regex route
     bucket, score = quick_regex_route(question)
     if bucket != "UNKNOWN":
-        return bucket
+        return bucket, "Regex"
 
     # 2. Semantic route
     bucket, score = semantic_route(question)
     if score >= SEMANTIC_SIM_THRESHOLD:
-        return bucket
+        return bucket, "Semantic"
 
     # 3. LLM classification fallback
     bucket, score = llm_classify_route(question)
-    return bucket
+    return bucket, "LLM"
 
 
 def suggest_questions():
@@ -208,7 +250,8 @@ def process_question(question):
     """Process a question using routing for financial analysis, forecasting, and RAG document analysis."""
     try:
         # Route the question to the appropriate category
-        category = route_question(question)
+        category, method = route_question(question)
+        print(f"Classification: {method}, Intent: {category}")
 
         if category == "GREETING":
             return "Hello! I'm Kraya, your financial AI assistant. I'm here to help you with financial analysis, forecasting, and document insights. How can I assist you today?"
