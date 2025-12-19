@@ -48,6 +48,9 @@ def upsert_embeddings(
 
 
 def search(collection_name: str, query_vector: list[float], top_k: int = 5):
-    return qdrant_client.search(
-        collection_name=collection_name, query_vector=query_vector, limit=top_k
+    search_results = qdrant_client.query_points(
+        collection_name=collection_name,
+        query=query_vector,
+        limit=top_k,
     )
+    return search_results.points

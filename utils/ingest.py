@@ -87,14 +87,14 @@ def ingest_csv_row_as_point(row, file_path, embedding_model):
         f"Invoice record: Invoice No. {row.get('Invoice No.', '')}, issued on {row.get('Invoice Date', '')}, "
         f"from {row.get('Supplier Name', '')} for {row.get('Service Description', '')}. "
         f"The original amount is {row.get('Amount (AED)', '')} AED. "
-        f"Final amount with penalty is {row.get('Final Amount with Penalty', '')} AED, "
-        f"and final amount with discount is {row.get('Final Amount with Discount', '')} AED. "
-        f"The VAT TRN is {row.get('VAT TRN', '')} with a VAT rate of {row.get('VAT %', '')}%. "
         f"The payment status is '{row.get('Payment Status', '')}', with a due date of {row.get('Due Date', '')} "
         f"and paid date recorded as {row.get('Paid Date', '')}. "
-        f"Status: {row.get('Status', '')}. "
-        f"Discount applied: {row.get('Discount', '')} (Note: {row.get('Discount Note', '')}). "
+        f"Discount applied in %: {row.get('Discount', '')} (Note: {row.get('Discount Note', '')}). "
+        f"and final amount with discount is {row.get('Final Amount with Discount', '')} AED. "
+        f"The VAT TRN is {row.get('VAT TRN', '')} with a VAT rate of {row.get('VAT %', '')}%. "
         f"Penalty applied: {row.get('Penalty', '')} (Note: {row.get('Penalty Note', '')})."
+        f"Final amount with penalty is {row.get('Final Amount with Penalty', '')} AED, "
+        f"Status: {row.get('Status', '')}. "
    )
 
     embedding = embedding_model.encode(text_chunk).tolist()

@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import re
 import numpy as np
 from typing import Dict, Tuple
 
@@ -63,23 +64,9 @@ SEMANTIC_SIM_THRESHOLD = 0.60  # tuned; fall back to LLM if below
 TOP_K = 3  # for nearest example check
 
 # Quick regex / keyword markers for fast routing (hybrid)
-FORECAST_KEYWORDS = [
-    "forecast", "predict", "projection", "scenario", "what will", "next quarter",
-    "next month", "next year", "trend for", "predicting", "will be", "forecast for",
-    "how much cash will", "projected", "projection", "cash in", "cash out",
-    "inflows", "outflows", "what if", "scenario", "simulate", "simulation"
-]
-
-DB_QUERY_KEYWORDS = [
-    "invoice", "invoices", "rebate summary", "rebate rule summary", "rebate", "payment", "overdue", "warning", "opportunity", "account receivable", " ap ",
-" ar ", "account payable", "receivables", "payables", "discount", "penalty", "late fee", "due date", "settlement", "supplier", "vendor", "customer",
-"customers", "payment schedule", "interest charge", "late payment",
-]
-RAG_KEYWORDS = [
-    "regulation", "license", "purchase orders", "purchase order", " po ", "terms and conditions", "t&c","retail payment system", "retail payment",
-"retail payemnt system service", "card scheme", "card scheme regulation", "compliance", "financial obligation", "extended terms", " PO ",
-"regulatory requirement", "reporting requirement", "internal control", "rps", "guarantee", "reminder notice", "capital requirements",
-]
+FORECAST_PATTERN = r"\b(forecast|predict|projection|scenario|what will|next quarter|next month|next year|trend for|predicting|will be|forecast for|how much cash will|projected|projection|cash in|cash out|inflows|outflows|what if|scenario|simulate|simulation)\b"
+DB_QUERY_PATTERN = r"\b(invoice|invoices|rebate summary|rebate rule summary|rebate|payment|overdue|warning|opportunity|account receivable|ap|ar|account payable|receivables|payables|discount|penalty|late fee|due date|settlement|supplier|vendor|customer|customers|payment schedule|interest charge|late payment)\b"
+RAG_PATTERN = r"\b(regulation|license|purchase orders|purchase order|po|terms and conditions|t&c|retail payment system|retail payment|retail payemnt system service|card scheme|card scheme regulation|compliance|financial obligation|extended terms|regulatory requirement|reporting requirement|internal control|rps|guarantee|reminder notice|capital requirements)\b"
 
 def _init_embedding_model():
     """Load embedding model once."""
@@ -134,17 +121,14 @@ def quick_regex_route(question: str) -> Tuple[str, float]:
     if q.strip() in GREETING_KEYWORDS or q.startswith(("hi ", "hello ", "hey ")):
         return ("GREETING", 1.0)
     # Forecast priority
-    for kw in FORECAST_KEYWORDS:
-        if kw in q:
-            return ("FORECAST", 0.95)
+    if re.search(FORECAST_PATTERN, q, re.IGNORECASE):
+        return ("FORECAST", 0.95)
     # DB / invoice queries are grouped into RAG
-    for kw in DB_QUERY_KEYWORDS:
-        if kw in q:
-            return ("RAG", 0.9)
+    if re.search(DB_QUERY_PATTERN, q, re.IGNORECASE):
+        return ("RAG", 0.9)
     # RAG keywords (policies/regulations)
-    for kw in RAG_KEYWORDS:
-        if kw in q:
-            return ("RAG", 0.9)
+    if re.search(RAG_PATTERN, q, re.IGNORECASE):
+        return ("RAG", 0.9)
     return ("UNKNOWN", 0.0)
 
 
@@ -485,9 +469,9 @@ def render():
                 }
             }
             </style>
-            <div style="text-align: center; padding: 60px 20px; color: #666;">
-                <h1 class="animate-character">Hi... There! I'm Kraya Your AI Assistant</h1>
-                <p style="font-size: 16px; margin: 0;">I'm here to help you with your financial questions and analysis.</p>
+            <div style=\"text-align: center; padding: 60px 20px; color: #666;">
+                <h1 class=\"animate-character\">Hi... There! I'm Kraya Your AI Assistant</h1>
+                <p style=\"font-size: 16px; margin: 0;">I'm here to help you with your financial questions and analysis.</p>
             </div>
             """, 
             unsafe_allow_html=True
